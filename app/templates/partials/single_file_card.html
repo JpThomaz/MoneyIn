@@ -1,0 +1,332 @@
+<div class="file-card-swap-target rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+  <div class="bg-gradient-to-r from-slate-50 to-white border-b border-slate-100 px-6 py-4">
+    <div class="flex items-center justify-between flex-wrap gap-3">
+      <div class="flex items-center gap-3">
+        <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-50">
+          <svg class="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        </div>
+        <div>
+          <h3 class="text-sm font-semibold text-slate-900">{{ f.filename }}</h3>
+          <p class="text-xs text-slate-400">
+            {% if f.doc_type == "EXTRATO" %}
+            📄 Extrato
+            {% elif f.doc_type == "FATURA" %}
+            💳 Fatura
+            {% else %}
+            📄 Documento
+            {% endif %}
+            {% if f.bank_name %} — {{ f.bank_name }}{% endif %}
+            {% if f.last_4 %} — ****{{ f.last_4 }}{% endif %}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# --- Account Card --- #}
+  <div class="mx-6 mt-4">
+    <div class="rounded-xl border {% if f.account_exists %}border-emerald-200 bg-emerald-50/30{% else %}border-amber-200 bg-amber-50/30{% endif %} overflow-hidden">
+      <div class="p-4">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <svg class="h-4 w-4 {% if f.account_exists %}text-emerald-600{% else %}text-amber-500{% endif %}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+            </svg>
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Conta</span>
+          </div>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium {% if f.account_exists %}bg-emerald-100 text-emerald-700{% else %}bg-amber-100 text-amber-700{% endif %}">
+            {% if f.account_exists %}
+            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            Vinculada
+            {% else %}
+            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01"/></svg>
+            Pendente
+            {% endif %}
+          </span>
+        </div>
+
+        {% if f.account_exists %}
+        <div class="flex items-center gap-3">
+          <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-100">
+            <svg class="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+            </svg>
+          </div>
+          <div class="flex-1">
+            <p class="text-sm font-semibold text-slate-900">{{ f.account_name or 'Conta' }}</p>
+            <p class="text-xs text-slate-500">
+              {% if f.bank_name %}{{ f.bank_name }}{% endif %}
+              {% if f.last_4 %} · ****{{ f.last_4 }}{% endif %}
+              · {{ 'Cartão de Crédito' if f.doc_type == 'FATURA' else 'Conta Corrente' }}
+            </p>
+          </div>
+          <button type="button" onclick="showAccountSelector(this, -1)"
+                  data-bank-slug="{{ f.bank_slug or '' }}"
+                  data-last-4="{{ f.last_4 or '' }}"
+                  data-doc-type="{{ f.doc_type or '' }}"
+                  class="text-xs font-medium text-emerald-600 hover:text-emerald-700 underline underline-offset-2 flex-shrink-0">
+            Trocar
+          </button>
+        </div>
+        {% else %}
+        <div class="space-y-3">
+          <p class="text-sm text-slate-600">
+            <span class="font-medium text-amber-700">Nenhuma conta vinculada</span>
+          </p>
+          {% if f.bank_slug %}
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+            <span>{{ f.bank_name or f.bank_slug }}</span>
+            {% if f.last_4 %}<span>****{{ f.last_4 }}</span>{% endif %}
+            <span>{{ 'Cartão de Crédito' if f.doc_type == 'FATURA' else 'Conta Corrente' }}</span>
+          </div>
+          {% endif %}
+
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="quickCreateAccount(this, '{{ f.bank_slug }}', '{{ f.last_4 or '' }}', '{{ f.doc_type or '' }}', -1)"
+                    class="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-amber-700">
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+              + Criar {{ 'Cartão' if f.doc_type == 'FATURA' else 'Conta' }}
+            </button>
+            <span class="text-xs text-slate-400">ou</span>
+            <select class="account-select text-xs rounded-lg border-slate-200 bg-white px-2 py-1.5 shadow-sm focus:border-emerald-400 focus:ring-1 focus:ring-emerald-200"
+                    onchange="onAccountSelect(this, -1)">
+              <option value="">Selecionar existente...</option>
+              {% for acct in household_accounts %}
+              <option value="{{ acct.id }}" data-name="{{ acct.name }}">{% if acct.bank_slug %}{{ acct.bank_slug | capitalize }} — {% endif %}{{ acct.name }} ({{ 'Crédito' if acct.type == 'CREDITO' else 'Corrente' }}{% if acct.last_4_digits %} · ****{{ acct.last_4_digits }}{% endif %})</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {% if f.doc_type == "EXTRATO" and f.saldo_final is not none %}
+  <div class="mx-6 mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+    <div class="flex items-center gap-3">
+      <div class="flex items-center justify-center w-9 h-9 rounded-full bg-emerald-100">
+        <svg class="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      </div>
+      <div>
+        <p class="text-xs text-emerald-700 font-medium">Saldo em conta identificado</p>
+        <p class="text-lg font-bold text-emerald-800">R$ {{ "%.2f"|format(f.saldo_final) }}</p>
+        <p class="text-xs text-emerald-600">Será atualizado automaticamente ao confirmar</p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <form class="file-review-form space-y-4 p-6">
+    <input type="hidden" name="account_id" value="{{ f.account_id or '' }}" />
+    <input type="hidden" name="doc_type" value="{{ f.doc_type or '' }}" />
+    <input type="hidden" name="saldo_final" value="{{ f.saldo_final if f.saldo_final is not none else '' }}" />
+    <input type="hidden" name="filename" value="{{ f.filename }}" />
+    <input type="hidden" name="bank_name" value="{{ f.bank_name or '' }}" />
+    <input type="hidden" name="bank_slug" value="{{ f.bank_slug or '' }}" />
+    <input type="hidden" name="last_4" value="{{ f.last_4 or '' }}" />
+    <input type="hidden" name="mes_vencimento" value="{{ f.mes_vencimento or '' }}" />
+    <input type="hidden" name="ano_vencimento" value="{{ f.ano_vencimento or '' }}" />
+
+    <div class="overflow-hidden rounded-lg border border-slate-200">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-slate-100">
+          <thead>
+            <tr class="bg-slate-50">
+              <th class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Data</th>
+              <th class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Descrição</th>
+              <th class="px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Valor (R$)</th>
+              <th class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Categoria</th>
+              <th class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Responsável</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50">
+            {% for t in f.transactions %}
+            <tr class="transaction-row transition-colors hover:bg-slate-50/50">
+              <td class="px-3 py-2">
+                <input type="date" class="tx-date block w-full rounded-md border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none" value="{{ t.data }}" required />
+              </td>
+              <td class="px-3 py-2 min-w-[180px]">
+                <input type="text" class="tx-desc block w-full rounded-md border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none" value="{{ t.descricao }}" required />
+                <input type="hidden" class="tx-installment-num" value="{{ t.installment_number | default(1) }}" />
+                <input type="hidden" class="tx-total-installments" value="{{ t.total_installments | default(1) }}" />
+                <input type="hidden" class="tx-reference-month" value="{{ t.reference_month or '' }}" />
+                <input type="hidden" class="tx-reference-year" value="{{ t.reference_year or '' }}" />
+                <input type="hidden" class="tx-description-clean" value="{{ t.description_clean or t.descricao }}" />
+              </td>
+              <td class="px-3 py-2">
+                <input type="number" step="0.01" class="tx-amount block w-28 ml-auto rounded-md border-slate-200 bg-white px-2.5 py-1.5 text-sm text-right font-medium shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none {% if t.valor < 0 %}text-rose-600{% else %}text-emerald-600{% endif %}" value="{{ t.valor }}" required />
+              </td>
+              <td class="px-3 py-2">
+                <select class="tx-category block w-full rounded-md border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none">
+                  <option value="">Sem categoria</option>
+                  {% for cat in categories %}
+                  <option value="{{ cat.id }}" {% if cat.name.lower() == (t.categoria or '').lower() %}selected{% endif %}>{{ cat.name }}</option>
+                  {% endfor %}
+                </select>
+                {% if t.categoria %}
+                <input type="hidden" class="tx-categoria-name" value="{{ t.categoria }}" />
+                {% endif %}
+              </td>
+              <td class="px-3 py-2">
+                <select class="tx-user block w-full rounded-md border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none">
+                  {% for member in household_members %}
+                  <option value="{{ member.id }}" {% if member.id == current_user_id %}selected{% endif %}>{{ member.name }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+  window.showAccountSelector = function(btn, idx) {
+    var accountCard = btn.closest('.rounded-xl');
+    if (!accountCard) return;
+    var existingSelect = accountCard.querySelector('select');
+    if (existingSelect) {
+      existingSelect.classList.toggle('hidden');
+      return;
+    }
+    var allOpts = '';
+    document.querySelectorAll('.account-select option').forEach(function(o) {
+      if (o.value) allOpts += o.outerHTML;
+    });
+    var div = document.createElement('div');
+    div.className = 'mt-2';
+    div.innerHTML = '<select class="block w-full rounded-lg border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200" onchange="onAccountSelect(this, ' + idx + ')">' +
+      '<option value="">Trocar conta...</option>' +
+      '<option value="__create__">+ Criar nova conta</option>' +
+      allOpts + '</select>';
+    var target = accountCard.querySelector('.flex.items-center.gap-3');
+    if (target) target.after(div);
+  };
+
+  window.onAccountSelect = function(select, idx) {
+    var val = select.value;
+    if (!val) return;
+    if (val === '__create__') {
+      var btn = select.closest('.rounded-xl').querySelector('button[data-bank-slug]');
+      if (btn) {
+        quickCreateAccount(btn, btn.getAttribute('data-bank-slug') || '', btn.getAttribute('data-last-4') || '', btn.getAttribute('data-doc-type') || '', idx);
+      }
+      return;
+    }
+    var form;
+    if (idx >= 0) {
+      var item = document.querySelector('.carousel-item[data-index="' + idx + '"]');
+      if (item) form = item.querySelector('.file-review-form');
+    } else {
+      form = select.closest('.file-review-form');
+    }
+    if (!form) return;
+    var accountInput = form.querySelector('input[name="account_id"]');
+    if (accountInput) accountInput.value = val;
+
+    var selectedOption = select.options[select.selectedIndex];
+    var name = selectedOption.textContent.trim();
+    var accountCard = select.closest('.rounded-xl');
+    if (accountCard) {
+      accountCard.className = 'rounded-xl border border-emerald-200 bg-emerald-50/30 overflow-hidden';
+      accountCard.innerHTML =
+        '<div class="p-4">' +
+          '<div class="flex items-center justify-between mb-3">' +
+            '<div class="flex items-center gap-2">' +
+              '<svg class="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>' +
+              '<span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Conta</span>' +
+            '</div>' +
+            '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">' +
+              '<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>' +
+              'Vinculada' +
+            '</span>' +
+          '</div>' +
+          '<div class="flex items-center gap-3">' +
+            '<div class="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-100">' +
+              '<svg class="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>' +
+            '</div>' +
+            '<div class="flex-1">' +
+              '<p class="text-sm font-semibold text-slate-900">' + escapeHtml(name) + '</p>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+    }
+  };
+
+  window.quickCreateAccount = function(btn, bankSlug, last4, docType, idx) {
+    var token = localStorage.getItem('token');
+    btn.disabled = true;
+    btn.textContent = 'Criando...';
+
+    var body = new URLSearchParams();
+    body.append('bank_slug', bankSlug);
+    body.append('last_4', last4);
+    body.append('doc_type', docType);
+
+    fetch('/api/upload-statement/quick-create-account', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: body
+    }).then(function(r) {
+      return r.text().then(function(text) {
+        try { return JSON.parse(text); } catch(e) { throw new Error(text); }
+      });
+    }).then(function(data) {
+      if (data.status === 'success') {
+        var accountInput;
+        if (idx >= 0) {
+          var item = document.querySelector('.carousel-item[data-index="' + idx + '"]');
+          if (item) accountInput = item.querySelector('input[name="account_id"]');
+        } else {
+          var swapTarget = btn.closest('.file-card-swap-target');
+          if (swapTarget) accountInput = swapTarget.querySelector('input[name="account_id"]');
+        }
+        if (accountInput) accountInput.value = data.account_id;
+        var accountCard = btn.closest('.rounded-xl');
+        if (accountCard) {
+          accountCard.className = 'rounded-xl border border-emerald-200 bg-emerald-50/30 overflow-hidden';
+          accountCard.innerHTML =
+            '<div class="p-4">' +
+              '<div class="flex items-center justify-between mb-3">' +
+                '<div class="flex items-center gap-2">' +
+                  '<svg class="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>' +
+                  '<span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Conta</span>' +
+                '</div>' +
+                '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">' +
+                  '<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>' +
+                  'Vinculada' +
+                '</span>' +
+              '</div>' +
+              '<div class="flex items-center gap-3">' +
+                '<div class="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-100">' +
+                  '<svg class="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>' +
+                '</div>' +
+                '<div class="flex-1">' +
+                  '<p class="text-sm font-semibold text-slate-900">' + escapeHtml(data.account_name || 'Conta') + '</p>' +
+                '</div>' +
+              '</div>' +
+            '</div>';
+        }
+      } else {
+        var errMsg = data.detail;
+        if (Array.isArray(errMsg)) errMsg = errMsg.map(function(e) { return e.msg || JSON.stringify(e); }).join('; ');
+        alert(errMsg || 'Erro ao criar conta');
+        console.error('quickCreateAccount error:', data);
+        btn.disabled = false;
+        btn.textContent = '+ Cadastrar';
+      }
+    }).catch(function(err) {
+      alert('Erro ao criar conta: ' + (err.message || err));
+      console.error('quickCreateAccount exception:', err);
+      btn.disabled = false;
+      btn.textContent = '+ Cadastrar';
+    });
+  };
+</script>

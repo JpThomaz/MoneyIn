@@ -1,0 +1,31 @@
+[project]
+name = "moneyin"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.136.3",
+    "google-genai>=2.7.0",
+    "pyjwt>=2.8.0",
+    "bcrypt>=4.0.1",
+    "pydantic>=2.13.4",
+    "pydantic-settings>=2.14.1",
+    "pymupdf>=1.27.2.3",
+    "python-dotenv>=1.2.2",
+    "python-multipart>=0.0.30",
+    "sqlmodel>=0.0.38",
+    "uvicorn>=0.48.0",
+    "passlib[bcrypt]>=1.7.4",
+    "jinja2>=3.1.6",
+    "numpy>=2.5.1",
+    "ipykernel>=7.3.0",
+    "jupyter>=1.1.1",
+    "jupyterlab>=4.6.1",
+    "pandas>=3.0.3",
+    "scikit-learn>=1.9.0",
+    "matplotlib>=3.11.0",
+    "seaborn>=0.13.2",
+    "statsmodels>=0.14.6",
+    "scipy-stubs~=1.18.0",
+]

@@ -1,0 +1,311 @@
+{% extends 'base.html' %}
+{% block title %}Membros — Money In{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <h1 class="text-2xl font-bold text-slate-900">Membros da Família</h1>
+  <p class="text-sm text-slate-500 mt-1">Gerencie quem faz parte do seu espaço financeiro</p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="space-y-4">
+    <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-base font-semibold text-slate-900 flex items-center gap-2">
+          <svg class="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+          Adicionar Membro
+        </h2>
+      </div>
+      <form id="add-member-form" class="space-y-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <input type="text" name="name" required placeholder="Nome do membro"
+                   class="block w-full rounded-lg border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none transition-colors" />
+          </div>
+          <div class="flex items-center">
+            <button type="submit"
+                    class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+              Adicionar
+            </button>
+          </div>
+        </div>
+        <p class="text-xs text-slate-400">Um código de 6 dígitos será gerado automaticamente para o novo membro.</p>
+      </form>
+      <div id="add-member-msg" class="mt-3 p-3 rounded-lg hidden text-sm"></div>
+    </div>
+
+    <div id="members-list" class="space-y-4">
+    {% for member in members %}
+    <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-all">
+      <div class="flex items-center gap-4">
+        <div class="flex-shrink-0">
+          {% if member.profile_picture_url %}
+          <img src="{{ member.profile_picture_url }}" alt="{{ member.name }}" class="h-14 w-14 rounded-full object-cover border-2 border-slate-100" />
+          {% else %}
+          <div class="h-14 w-14 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
+            {{ member.name[:2] | upper }}
+          </div>
+          {% endif %}
+        </div>
+        {% set mid = member.id | string %}
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2">
+            <h3 class="text-base font-semibold text-slate-900 truncate member-name" data-id="{{ member.id }}">{{ member.name }}</h3>
+            {% if member.id == current_user_id %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-600 border border-emerald-200">
+              Admin
+            </span>
+            {% else %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500">
+              Membro
+            </span>
+            {% endif %}
+          </div>
+          {% if member.access_code %}
+          <div class="flex items-center gap-2 mt-1">
+            <p class="text-sm text-slate-500 font-mono tracking-widest member-code" data-id="{{ member.id }}">{{ member.access_code }}</p>
+            <button onclick="copyAccessCode('{{ member.access_code }}', this)" title="Copiar código"
+                    class="p-1 rounded text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors">
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            </button>
+          </div>
+          {% endif %}
+          <div class="hidden mt-2 edit-member-form" data-id="{{ member.id }}">
+            <div class="flex gap-2">
+              <input type="text" class="edit-name-input block w-full rounded-lg border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none" value="{{ member.name }}" />
+              <button class="save-member-btn px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition-colors" data-id="{{ member.id }}">
+                Salvar
+              </button>
+              <button class="cancel-member-btn px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors" data-id="{{ member.id }}">
+                Cancelar
+              </button>
+            </div>
+            <div class="edit-member-msg mt-2 hidden text-xs"></div>
+          </div>
+        </div>
+        <div class="flex-shrink-0 flex items-center gap-1">
+          {% if member.id == current_user_id %}
+          <span class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Você
+          </span>
+          {% else %}
+          <button onclick="regenerateCode('{{ member.id }}', '{{ member.name }}')" title="Gerar novo código de acesso"
+                  class="p-2 rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          </button>
+          <button onclick="toggleEditMember('{{ member.id }}')"
+                  class="p-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          </button>
+          <button onclick="deleteMember('{{ member.id }}', '{{ member.name }}')"
+                  class="p-2 rounded-md text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h2 class="text-base font-semibold text-slate-900">Gastos por Membro</h2>
+        <p class="text-xs text-slate-400 mt-0.5">Comparativo de despesas no período</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <select id="period-month" class="rounded-lg border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none">
+          {% for m in range(1, 13) %}
+          <option value="{{ m }}" {% if m == current_month %}selected{% endif %}>{{ '%02d' | format(m) }}</option>
+          {% endfor %}
+        </select>
+        <select id="period-year" class="rounded-lg border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none">
+          {% for y in range(current_year - 2, current_year + 1) %}
+          <option value="{{ y }}" {% if y == current_year %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    {% if member_spending %}
+    <div class="space-y-4">
+      {% for ms in member_spending %}
+      <div class="flex items-center gap-4">
+        <div class="flex-shrink-0">
+          <div class="h-10 w-10 rounded-full bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center text-white font-bold text-sm">
+            {{ ms.name[:2] | upper }}
+          </div>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-sm font-medium text-slate-900">{{ ms.name }}</span>
+            <span class="text-sm font-semibold {% if ms.total > 0 %}text-rose-600{% else %}text-slate-400{% endif %}">
+              R$ {{ "%.2f"|format(ms.total) }}
+            </span>
+          </div>
+          <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+            {% set max_val = member_spending | map(attribute='total') | max %}
+            <div class="h-full rounded-full transition-all duration-700 {% if ms.total == max_val %}bg-rose-400{% else %}bg-emerald-400{% endif %}"
+                 style="width: {% if max_val > 0 %}{{ (ms.total / max_val * 100) | round }}{% else %}0{% endif %}%">
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="mt-6 pt-4 border-t border-slate-100">
+      <div class="grid grid-cols-2 gap-4 text-center">
+        <div>
+          <p class="text-xs text-slate-400">Total de Despesas</p>
+          <p class="text-lg font-bold text-rose-600">R$ {{ "%.2f"|format(total_expense) }}</p>
+        </div>
+        <div>
+          <p class="text-xs text-slate-400">Média por Membro</p>
+          <p class="text-lg font-bold text-slate-900">R$ {{ "%.2f"|format(avg_expense) }}</p>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="py-8 text-center">
+      <svg class="mx-auto h-10 w-10 text-slate-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      <p class="text-sm text-slate-400">Nenhum gasto registrado no período</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function() {
+    var token = localStorage.getItem('token');
+    if (!token) { window.location.href = '/'; return; }
+    htmx.on('htmx:configRequest', function(detail) {
+      detail.headers['Authorization'] = 'Bearer ' + token;
+    });
+
+    var monthSelect = document.getElementById('period-month');
+    var yearSelect = document.getElementById('period-year');
+    if (monthSelect && yearSelect) {
+      function reloadMembers() {
+        var month = monthSelect.value;
+        var year = yearSelect.value;
+        htmx.ajax('GET', '/membros?month=' + month + '&year=' + year, { target: 'main', swap: 'innerHTML' });
+      }
+      monthSelect.addEventListener('change', reloadMembers);
+      yearSelect.addEventListener('change', reloadMembers);
+    }
+
+    document.getElementById('add-member-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      var formData = new FormData(e.target);
+      var msgDiv = document.getElementById('add-member-msg');
+      var res = await fetch('/api/membros', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token },
+        body: formData
+      });
+      var data = await res.json();
+      msgDiv.classList.remove('hidden');
+      if (res.ok) {
+        msgDiv.className = 'mt-3 p-3 rounded-lg text-sm bg-emerald-900 border border-emerald-700 text-emerald-200';
+        msgDiv.textContent = 'Membro adicionado! Código: ' + data.access_code;
+        setTimeout(function() { window.location.reload(); }, 2000);
+      } else {
+        msgDiv.className = 'mt-3 p-3 rounded-lg text-sm bg-red-900 border border-red-700 text-red-200';
+        msgDiv.textContent = data.detail || 'Erro ao adicionar membro';
+      }
+    });
+  })();
+
+  function toggleEditMember(id) {
+    var form = document.querySelector('.edit-member-form[data-id="' + id + '"]');
+    if (form) {
+      form.classList.toggle('hidden');
+    }
+  }
+
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('save-member-btn')) {
+      var id = e.target.getAttribute('data-id');
+      var form = e.target.closest('.edit-member-form');
+      var nameInput = form.querySelector('.edit-name-input');
+      var msgDiv = form.querySelector('.edit-member-msg');
+      var token = localStorage.getItem('token');
+
+      var body = new URLSearchParams();
+      body.append('name', nameInput.value);
+
+      fetch('/api/membros/' + id, {
+        method: 'PUT',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: body
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        msgDiv.classList.remove('hidden');
+        if (data.status === 'success') {
+          msgDiv.className = 'edit-member-msg mt-2 text-xs text-emerald-600';
+          msgDiv.textContent = 'Salvo!';
+          document.querySelector('.member-name[data-id="' + id + '"]').textContent = nameInput.value;
+          setTimeout(function() {
+            form.classList.add('hidden');
+            msgDiv.classList.add('hidden');
+          }, 1500);
+        } else {
+          msgDiv.className = 'edit-member-msg mt-2 text-xs text-red-500';
+          msgDiv.textContent = data.detail || 'Erro ao salvar';
+        }
+      });
+    }
+
+    if (e.target.classList.contains('cancel-member-btn')) {
+      var id = e.target.getAttribute('data-id');
+      var form = e.target.closest('.edit-member-form');
+      form.classList.add('hidden');
+    }
+  });
+
+  function deleteMember(id, name) {
+    if (!confirm('Remover ' + name + ' da família?')) return;
+    var token = localStorage.getItem('token');
+    fetch('/api/membros/' + id, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + token }
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      if (data.status === 'success') {
+        window.location.reload();
+      } else {
+        alert(data.detail || 'Erro ao remover');
+      }
+    });
+  }
+
+  function copyAccessCode(code, btn) {
+    navigator.clipboard.writeText(code).then(function() {
+      btn.classList.add('text-emerald-600');
+      setTimeout(function() { btn.classList.remove('text-emerald-600'); }, 1500);
+    });
+  }
+
+  function regenerateCode(userId, memberName) {
+    if (!confirm('Gerar novo código de acesso para ' + memberName + '? O código anterior deixará de funcionar.')) return;
+    var token = localStorage.getItem('token');
+    fetch('/api/auth/generate-code?user_id=' + userId, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      if (data.status === 'success') {
+        window.location.reload();
+      } else {
+        alert(data.detail || 'Erro ao gerar código');
+      }
+    });
+  }
+</script>
+{% endblock %}

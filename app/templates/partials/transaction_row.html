@@ -1,0 +1,107 @@
+<tr id="tx-row-{{ tx.id }}" class="group transition-colors hover:bg-slate-50 border-b border-slate-100 {% if tx.status == 'PROJECTED' %}bg-sky-50/40{% endif %}">
+  <td class="whitespace-nowrap px-4 py-3 text-sm text-slate-600">
+    {% if tx.status == 'PROJECTED' %}
+    <span class="inline-flex items-center gap-1 rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-medium text-sky-700 mr-1.5">
+      Projeção
+    </span>
+    {% endif %}
+    {{ tx.date.strftime('%d/%m/%Y') }}
+  </td>
+  <td class="whitespace-nowrap px-4 py-3">
+    {% set account = accounts_map.get(tx.account_id) %}
+    {% if account %}
+    <span class="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+      {% if account.bank_slug == 'nubank' %}
+      <span class="text-purple-600">●</span>
+      {% elif account.bank_slug == 'itau' %}
+      <span class="text-orange-600">●</span>
+      {% elif account.bank_slug == 'sicredi' %}
+      <span class="text-blue-600">●</span>
+      {% elif account.bank_slug == 'bb' %}
+      <span class="text-yellow-600">●</span>
+      {% elif account.bank_slug == 'inter' %}
+      <span class="text-rose-600">●</span>
+      {% else %}
+      <span class="text-slate-400">●</span>
+      {% endif %}
+      {{ account.name }}
+    </span>
+    {% endif %}
+  </td>
+  <td class="px-4 py-3 text-sm text-slate-800 max-w-xs truncate">
+    {% if tx.is_transfer %}
+    <span class="inline-flex items-center gap-1 text-slate-400">
+      <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+      {{ tx.description }}
+    </span>
+    {% else %}
+    {{ tx.description }}
+    {% endif %}
+  </td>
+  <td class="whitespace-nowrap px-4 py-3 text-center">
+    {% if tx.total_installments and tx.total_installments > 1 %}
+    <span class="inline-flex items-center gap-1 rounded-md {% if tx.status == 'PROJECTED' %}bg-sky-100 text-sky-700{% else %}bg-slate-100 text-slate-600{% endif %} px-2 py-0.5 text-xs font-mono font-semibold">
+      {{ tx.installment_number }}/{{ tx.total_installments }}
+    </span>
+    {% else %}
+    <span class="text-xs text-slate-200">—</span>
+    {% endif %}
+  </td>
+  <td class="whitespace-nowrap px-4 py-3">
+    {% set member = members_map.get(tx.user_id) %}
+    {% if member %}
+    <span class="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
+      <span class="flex h-4 w-4 items-center justify-center rounded-full bg-indigo-200 text-[9px] font-bold text-indigo-800">
+        {{ member.name[:2].upper() }}
+      </span>
+      {{ member.name.split()[0] }}
+    </span>
+    {% else %}
+    <span class="text-xs text-slate-300">—</span>
+    {% endif %}
+  </td>
+  <td class="whitespace-nowrap px-4 py-3">
+    {% set cat = categories_map.get(tx.category_id) %}
+    {% if cat %}
+    <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium" style="background-color: {{ cat.color }}20; color: {{ cat.color }};">
+      <span class="h-1.5 w-1.5 rounded-full" style="background-color: {{ cat.color }};"></span>
+      {{ cat.name }}
+    </span>
+    {% elif tx.is_transfer %}
+    <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-400">
+      <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+      Transferência Interna
+    </span>
+    {% else %}
+    <span class="text-xs text-slate-300">—</span>
+    {% endif %}
+  </td>
+  <td class="whitespace-nowrap px-4 py-3 text-right">
+    {% if tx.is_transfer %}
+    <span class="text-sm font-medium text-slate-400">R$ {{ "%.2f"|format(tx.amount) }}</span>
+    {% elif tx.amount < 0 %}
+    <span class="text-sm font-semibold text-rose-600">- R$ {{ "%.2f"|format(tx.amount|abs) }}</span>
+    {% else %}
+    <span class="text-sm font-semibold text-emerald-600">+ R$ {{ "%.2f"|format(tx.amount) }}</span>
+    {% endif %}
+  </td>
+  <td class="whitespace-nowrap px-4 py-3 text-right">
+    <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <button hx-get="/api/transactions/{{ tx.id }}/edit"
+              hx-target="#tx-row-{{ tx.id }}"
+              hx-swap="outerHTML"
+              class="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+              title="Editar">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+      </button>
+      <button hx-delete="/api/transactions/{{ tx.id }}"
+              hx-target="#tx-row-{{ tx.id }}"
+              hx-swap="outerHTML swap:0.3s"
+              hx-confirm="Excluir esta transação?"
+              class="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+              title="Excluir">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+      </button>
+    </div>
+  </td>
+</tr>

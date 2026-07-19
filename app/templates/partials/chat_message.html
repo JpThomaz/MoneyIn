@@ -1,0 +1,42 @@
+{# Chat message bubble partial. Renders a single message.
+   Params: role ('user' | 'assistant'), text (string)
+   Supports basic Markdown: **bold**, lists, paragraphs
+#}
+{% if role == 'user' %}
+<div class="flex justify-end mb-3">
+  <div class="max-w-[85%] rounded-2xl rounded-br-md bg-indigo-600 px-4 py-2.5 text-sm text-white shadow-sm">
+    <p class="whitespace-pre-wrap leading-relaxed">{{ text }}</p>
+  </div>
+</div>
+{% else %}
+<div class="flex items-start gap-2 mb-3">
+  <div class="mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-emerald-100">
+    <svg class="h-3.5 w-3.5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+  </div>
+  <div class="max-w-[85%] rounded-2xl rounded-tl-md bg-slate-100 px-4 py-2.5 text-sm text-slate-800 shadow-sm">
+    {# Render: split by double-newlines for paragraphs, handle bold and lists #}
+    {% for paragraph in text.split('\n\n') %}
+      {% set p = paragraph.strip() %}
+      {% if p %}
+        {% if p.startswith('- ') %}
+          <ul class="list-disc list-inside space-y-0.5 my-1.5 text-sm">
+          {% for line in p.split('\n') %}
+            {% set li = line.strip() %}
+            {% if li.startswith('- ') %}
+              <li>{{ li[2:] }}</li>
+            {% endif %}
+          {% endfor %}
+          </ul>
+        {% else %}
+          <p class="leading-relaxed my-1.5">
+            {% set bold_parts = p.split('**') %}
+            {% for part in bold_parts %}
+              {% if loop.index0 % 2 == 1 %}<strong>{{ part }}</strong>{% else %}{{ part }}{% endif %}
+            {% endfor %}
+          </p>
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endif %}

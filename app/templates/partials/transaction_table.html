@@ -1,0 +1,48 @@
+<div id="transaction-table-wrapper" class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+  {% if transactions %}
+  <div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-slate-100">
+      <thead>
+        <tr class="bg-slate-50/80">
+          {% macro sort_th(col, label, align='left') %}
+          {% set is_active = (sort_by|default('date') == col) %}
+          {% set next_dir = 'asc' if sort_dir|default('desc') == 'desc' else 'desc' if is_active else 'asc' %}
+          <th class="px-4 py-3 text-{{ align }} text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <button type="button" onclick="txSortBy('{{ col }}','{{ next_dir }}')"
+                    class="inline-flex items-center gap-1 hover:text-emerald-600 transition-colors cursor-pointer select-none">
+              {{ label }}
+              <span class="inline-flex flex-col -space-y-1">
+                <svg class="h-2 w-2 {% if is_active and sort_dir|default('desc') == 'asc' %}text-emerald-600{% else %}text-slate-300{% endif %}" viewBox="0 0 10 6" fill="currentColor"><path d="M5 0l5 6H0z"/></svg>
+                <svg class="h-2 w-2 {% if is_active and sort_dir|default('desc') == 'desc' %}text-emerald-600{% else %}text-slate-300{% endif %}" viewBox="0 0 10 6" fill="currentColor"><path d="M5 6L0 0h10z"/></svg>
+              </span>
+            </button>
+          </th>
+          {% endmacro %}
+
+          {{ sort_th('date', 'Data') }}
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Origem</th>
+          {{ sort_th('description', 'Descrição') }}
+          {{ sort_th('installment', 'Parcela', 'center') }}
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Responsável</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Categoria</th>
+          {{ sort_th('amount', 'Valor', 'right') }}
+          <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 w-16"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-50">
+        {% for tx in transactions %}
+          {% include "partials/transaction_row.html" %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="flex flex-col items-center justify-center py-16 text-center">
+    <svg class="h-12 w-12 text-slate-200 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <h3 class="text-base font-semibold text-slate-700">Nenhuma movimentação encontrada</h3>
+    <p class="mt-1 text-sm text-slate-400">Importe um extrato ou cadastre uma transação manual.</p>
+  </div>
+  {% endif %}
+</div>

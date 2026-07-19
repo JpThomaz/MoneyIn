@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Money In - Gestão Financeira Inteligente</title>
+    <!-- CDNs Essenciais -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <!-- Configuração de Temas do Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            dark: '#0f172a', /* Slate 900 */
+                            light: '#f8fafc', /* Slate 50 */
+                            accent: '#10b981', /* Emerald 500 (Verde) */
+                            danger: '#f43f5e' /* Rose 500 (Vermelho) */
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Correção de transição para o HTMX */
+        .htmx-settling img { opacity: 0; }
+        .htmx-request { opacity: 0.5; transition: opacity 200ms ease-in; }
+    </style>
+</head>
+<body class="h-full font-sans text-slate-900 antialiased">
+
+    <div class="min-h-full">
+        <!-- 1. SIDEBAR FIXA (Desktop) -->
+        <div class="hidden md:fixed md:inset-y-0 md:flex md:w-64 md:flex-col">
+            <div class="flex min-h-0 flex-1 flex-col bg-slate-900">
+                <!-- Logo -->
+                <div class="flex h-16 flex-shrink-0 items-center bg-slate-950 px-6">
+                    <span class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                        <span class="text-brand-accent">💰</span> MoneyIn <span class="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded">v1.0</span>
+                    </span>
+                </div>
+                <!-- Links de Navegação -->
+                <nav class="flex-1 space-y-1 px-4 py-4">
+                    {% set nav_items = [
+                        ('/dashboard', 'M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z', 'Dashboard'),
+                        ('/upload', 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12', 'Importar Extrato'),
+                        ('/extrato', 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01', 'Extrato'),
+                        ('/categorias', 'M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z', 'Categorias'),
+                        ('/membros', 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z', 'Membros'),
+                        ('/contas', 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z', 'Contas e Cartões'),
+                    ] %}
+                    {% for href, icon, label in nav_items %}
+                    {% set is_active = request.url.path == href or request.url.path.startswith(href + '/') %}
+                    <a href="{{ href }}"
+                       class="{% if is_active %}bg-slate-800 text-white{% else %}text-slate-300 hover:bg-slate-800 hover:text-white{% endif %} group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors">
+                        <svg class="mr-3 h-5 w-5 {% if is_active %}text-brand-accent{% else %}text-slate-400 group-hover:text-slate-300{% endif %}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ icon }}"/></svg>
+                        {{ label }}
+                    </a>
+                    {% endfor %}
+                </nav>
+            </div>
+        </div>
+
+        <!-- 2. CORPO PRINCIPAL (Área de conteúdo com Topbar) -->
+        <div class="flex flex-col md:pl-64">
+            <!-- TOPBAR -->
+            <div class="sticky top-0 z-10 flex h-16 flex-shrink-0 bg-white shadow-sm border-b border-slate-200">
+                <div class="flex flex-1 justify-between px-6">
+                    <!-- Esquerda da Topbar (Título Dinâmico ou Buscas) -->
+                    <div class="flex flex-1 items-center">
+                        <span class="text-sm font-semibold text-slate-500 flex items-center gap-2">
+                            🏠 Visão Consolidada: <span class="text-slate-800 font-bold">Espaço Familiar</span>
+                        </span>
+                    </div>
+                    <!-- Direita da Topbar (Perfil e Ações de Usuário) -->
+                    <div class="ml-4 flex items-center md:ml-6 gap-4">
+                        <!-- Notificações de Importação -->
+                        <div class="relative" id="import-notifications-wrapper">
+                            <button type="button" onclick="document.getElementById('import-notifications-dropdown').classList.toggle('hidden')" class="rounded-full bg-white p-1 text-slate-400 hover:text-slate-500 focus:outline-none">
+                                <span class="sr-only">Notificações</span>
+                                <div class="relative">
+                                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                                    <span id="import-badge" class="absolute -top-1 -right-1 hidden min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white ring-2 ring-white"></span>
+                                </div>
+                            </button>
+                            <div id="import-notifications-dropdown" class="hidden absolute right-0 z-50 mt-2 w-80 origin-top-right rounded-xl bg-white shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none overflow-hidden">
+                                <div class="px-4 py-3 border-b border-slate-100 bg-slate-50">
+                                    <p class="text-xs font-semibold text-slate-900 uppercase tracking-wider">Importações</p>
+                                </div>
+                                <div id="import-notifications-list" class="max-h-80 overflow-y-auto divide-y divide-slate-50">
+                                    <div class="px-4 py-6 text-center">
+                                        <p class="text-xs text-slate-400">Nenhuma importação</p>
+                                    </div>
+                                </div>
+                                <div class="border-t border-slate-100 bg-slate-50 px-4 py-2">
+                                    <a href="/extrato" class="text-xs font-semibold text-emerald-600 hover:text-emerald-700">Ver histórico completo</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Divisor -->
+                        <div class="h-6 w-px bg-slate-200"></div>
+
+                        <!-- Menu de Perfil / Dropdown Simples com JS nativo para controle de clique -->
+                        <div class="relative">
+                            <button type="button" onclick="document.getElementById('user-menu').classList.toggle('hidden')" class="flex max-w-xs items-center rounded-full bg-white text-sm focus:outline-none lg:rounded-md lg:p-2 lg:hover:bg-slate-50" id="user-menu-button">
+                                <div class="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-700 border border-slate-300">
+                                    JP
+                                </div>
+                                <span class="ml-3 hidden text-sm font-medium text-slate-700 lg:block"><span class="sr-only">Menu do usuário para </span>João de Paula</span>
+                                <svg class="ml-1 hidden h-5 w-5 flex-shrink-0 text-slate-400 lg:block" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" /></svg>
+                            </button>
+
+                            <!-- Dropdown Menu -->
+                            <div id="user-menu" class="hidden absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                                <div class="px-4 py-2 border-b border-slate-100">
+                                    <p class="text-xs text-slate-400">Logado como</p>
+                                    <p class="text-sm font-medium text-slate-700 truncate">joao@email.com</p>
+                                </div>
+                                <a href="/configuracoes" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Configurações</a>
+                                <a href="/logout" class="block px-4 py-2 text-sm text-brand-danger hover:bg-slate-50 font-medium">Sair</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CONTEÚDO DA PÁGINA (Injetado via Rotas) -->
+            <main class="flex-1 py-6 px-6">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+<!-- Global Import Notifications -->
+<div id="import-toast-container" class="fixed top-20 right-4 z-50 space-y-2 pointer-events-none"></div>
+
+<script>
+(function() {
+  var token = localStorage.getItem('token');
+  if (!token) return;
+
+  var spinnerSvg = '<svg class="h-4 w-4 animate-spin text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>';
+  var checkSvg = '<svg class="h-4 w-4 text-emerald-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>';
+  var errorSvg = '<svg class="h-4 w-4 text-rose-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>';
+  var pendingSvg = '<svg class="h-4 w-4 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+
+  var prevStatuses = {};
+  try { prevStatuses = JSON.parse(localStorage.getItem('importStatuses') || '{}'); } catch(e) { prevStatuses = {}; }
+
+  function escapeHtml(str) {
+    var div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+
+  function showToast(message, type) {
+    var container = document.getElementById('import-toast-container');
+    if (!container) return;
+    var bgClass = type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-amber-50 border-amber-200 text-amber-800';
+    var icon = type === 'success' ? checkSvg : type === 'error' ? errorSvg : spinnerSvg;
+    var toast = document.createElement('div');
+    toast.className = 'pointer-events-auto flex items-center gap-3 rounded-lg border px-4 py-3 shadow-lg transition-all transform translate-x-full opacity-0 ' + bgClass;
+    toast.innerHTML = icon + '<span class="text-sm font-medium">' + escapeHtml(message) + '</span>';
+    container.appendChild(toast);
+    requestAnimationFrame(function() {
+      toast.classList.remove('translate-x-full', 'opacity-0');
+      toast.classList.add('translate-x-0', 'opacity-100');
+    });
+    setTimeout(function() {
+      toast.classList.remove('translate-x-0', 'opacity-100');
+      toast.classList.add('translate-x-full', 'opacity-0');
+      setTimeout(function() { toast.remove(); }, 300);
+    }, 6000);
+  }
+
+  function openDropdown() {
+    var dd = document.getElementById('import-notifications-dropdown');
+    if (dd) dd.classList.remove('hidden');
+  }
+
+  function renderNotifications(data) {
+    var list = document.getElementById('import-notifications-list');
+    var badge = document.getElementById('import-badge');
+    if (!list || !badge) return;
+
+    if (!data || data.length === 0) {
+      list.innerHTML = '<div class="px-4 py-6 text-center"><p class="text-xs text-slate-400">Nenhuma importação</p></div>';
+      badge.classList.add('hidden');
+      badge.textContent = '';
+      return;
+    }
+
+    var activeCount = 0;
+    var html = '';
+    for (var i = 0; i < data.length; i++) {
+      var item = data[i];
+      var icon = pendingSvg;
+      var statusLabel = 'Na fila';
+      var statusBg = 'bg-slate-100 text-slate-600';
+
+      if (item.status === 'EXTRACTING') {
+        icon = spinnerSvg;
+        statusLabel = 'Extraindo';
+        statusBg = 'bg-blue-100 text-blue-700';
+        activeCount++;
+      } else if (item.status === 'PROCESSING') {
+        icon = spinnerSvg;
+        statusLabel = 'Processando';
+        statusBg = 'bg-amber-100 text-amber-700';
+        activeCount++;
+      } else if (item.status === 'DONE') {
+        icon = checkSvg;
+        statusLabel = 'Concluído';
+        statusBg = 'bg-emerald-100 text-emerald-700';
+      } else if (item.status === 'FAILED') {
+        icon = errorSvg;
+        statusLabel = 'Erro';
+        statusBg = 'bg-rose-100 text-rose-700';
+      } else if (item.status === 'PENDING') {
+        icon = pendingSvg;
+        statusLabel = 'Na fila';
+        statusBg = 'bg-slate-100 text-slate-600';
+        activeCount++;
+      }
+
+      var detail = item.progress_message || item.error_message || '';
+      var detailClass = item.error_message ? 'text-rose-500' : 'text-slate-500';
+      var detailHtml = detail ? '<p class="text-[11px] ' + detailClass + ' mt-0.5 truncate">' + escapeHtml(detail) + '</p>' : '';
+      var timeHtml = item.uploaded_at ? '<p class="text-[10px] text-slate-400 mt-0.5">' + new Date(item.uploaded_at).toLocaleString('pt-BR') + '</p>' : '';
+
+      var actionHtml = '';
+      if (item.status === 'DONE') {
+        actionHtml = '<a href="/extrato" class="text-[10px] font-semibold text-emerald-600 hover:text-emerald-700 underline mt-1 inline-block">Ver no Extrato</a>';
+      } else if (item.status === 'FAILED') {
+        actionHtml = '<a href="/upload" class="text-[10px] font-semibold text-rose-600 hover:text-rose-700 underline mt-1 inline-block">Tentar novamente</a>';
+      }
+
+      html += '<div class="px-4 py-3 hover:bg-slate-50/50 transition-colors">' +
+        '<div class="flex items-start gap-3">' +
+          '<div class="mt-0.5">' + icon + '</div>' +
+          '<div class="flex-1 min-w-0">' +
+            '<p class="text-sm font-medium text-slate-900 truncate">' + escapeHtml(item.display_name) + '</p>' +
+            detailHtml + timeHtml + actionHtml +
+          '</div>' +
+          '<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold flex-shrink-0 ' + statusBg + '">' + statusLabel + '</span>' +
+        '</div>' +
+      '</div>';
+    }
+    list.innerHTML = html;
+
+    if (activeCount > 0) {
+      badge.textContent = activeCount;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+      badge.textContent = '';
+    }
+  }
+
+  function checkTransitions(data) {
+    if (!data) return;
+    var newStatuses = {};
+    for (var i = 0; i < data.length; i++) {
+      var item = data[i];
+      newStatuses[item.id] = item.status;
+
+      var prev = prevStatuses[item.id];
+      if (prev !== undefined && prev !== item.status) {
+        if (item.status === 'DONE') {
+          showToast('Importação concluída: ' + item.display_name, 'success');
+        } else if (item.status === 'FAILED') {
+          showToast('Falha na importação: ' + (item.error_message || item.display_name), 'error');
+        } else if (item.status === 'EXTRACTING') {
+          showToast('Extraindo dados: ' + item.display_name, 'info');
+        } else if (item.status === 'PROCESSING') {
+          showToast('Processando: ' + item.display_name, 'info');
+        }
+      }
+    }
+    prevStatuses = newStatuses;
+    try { localStorage.setItem('importStatuses', JSON.stringify(prevStatuses)); } catch(e) {}
+  }
+
+  async function fetchImportStatus() {
+    try {
+      var response = await fetch('/api/upload-statement/status', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (!response.ok) return;
+      var data = await response.json();
+      checkTransitions(data);
+      renderNotifications(data);
+    } catch (err) { /* ignore polling errors */ }
+  }
+
+  fetchImportStatus();
+  window._importPollInterval = setInterval(fetchImportStatus, 3000);
+
+  function addOptimisticImport(importData) {
+    try {
+      var cached = JSON.parse(localStorage.getItem('importStatuses') || '{}');
+      cached[importData.id] = importData.status;
+      localStorage.setItem('importStatuses', JSON.stringify(cached));
+    } catch(e) {}
+    fetchImportStatus();
+    openDropdown();
+    showToast('Importação iniciada: ' + importData.display_name, 'info');
+  }
+
+  window.importNotifications = { addOptimisticImport: addOptimisticImport, refresh: fetchImportStatus };
+
+  try {
+    var bc = new BroadcastChannel('moneyin-imports');
+    bc.onmessage = function(e) {
+      if (e.data && e.data.type === 'new-import') {
+        addOptimisticImport(e.data.import);
+      } else if (e.data && e.data.type === 'refresh') {
+        fetchImportStatus();
+      }
+    };
+    window._importBC = bc;
+  } catch(err) {}
+
+  document.addEventListener('click', function(e) {
+    var wrapper = document.getElementById('import-notifications-wrapper');
+    var dropdown = document.getElementById('import-notifications-dropdown');
+    if (wrapper && dropdown && !wrapper.contains(e.target)) {
+      dropdown.classList.add('hidden');
+    }
+  });
+})();
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

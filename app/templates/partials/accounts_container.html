@@ -1,0 +1,163 @@
+<div id="accounts-container" class="space-y-8">
+  {% set groups = {
+    'CORRENTE': {'label': 'Contas Correntes', 'icon': 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z', 'color': 'emerald'},
+    'CREDITO': {'label': 'Cartões de Crédito', 'icon': 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z', 'color': 'rose'},
+    'BENEFICIO': {'label': 'Benefícios (VA/VR)', 'icon': 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z', 'color': 'amber'},
+  } %}
+
+  {% for group_key, group_info in groups.items() %}
+    {% set group_accounts = accounts | selectattr('type', 'equalto', group_key) | list %}
+    {% if group_accounts %}
+    <section>
+      <div class="flex items-center gap-3 mb-4">
+        <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-{{ group_info.color }}-50">
+          <svg class="w-4 h-4 text-{{ group_info.color }}-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ group_info.icon }}"/></svg>
+        </div>
+        <h2 class="text-lg font-semibold text-slate-900">{{ group_info.label }}</h2>
+        <span class="text-xs text-slate-400 font-medium">({{ group_accounts | length }})</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {% for account in group_accounts %}
+        {% set is_credito = group_key == 'CREDITO' %}
+        <div class="group/card relative rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-all overflow-hidden">
+          <!-- Edit/Delete buttons (top right, visible on hover) -->
+          <div class="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover/card:opacity-100 transition-opacity z-10">
+            <button onclick="openEditAccount('{{ account.id }}', '{{ account.name }}', '{{ account.type }}', '{{ account.bank_slug or '' }}', '{{ account.user_id }}', '{{ account.balance }}', '{{ account.credit_limit or '' }}')"
+                    class="rounded-lg bg-white/90 backdrop-blur p-1.5 text-slate-400 hover:bg-sky-50 hover:text-sky-600 shadow-sm border border-slate-200 transition-colors"
+                    title="Editar">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            </button>
+            <button onclick="deleteAccount('{{ account.id }}')"
+                    class="rounded-lg bg-white/90 backdrop-blur p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 shadow-sm border border-slate-200 transition-colors"
+                    title="Excluir">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
+
+          <div class="h-2 w-full bg-gradient-to-r
+            {% if group_key == 'CORRENTE' %}from-emerald-400 to-emerald-500
+            {% elif group_key == 'CREDITO' %}from-rose-400 to-rose-500
+            {% else %}from-amber-400 to-amber-500{% endif %}">
+          </div>
+          <div class="p-5">
+            <div class="flex items-start justify-between mb-4">
+              <div>
+                <div class="flex items-center gap-2">
+                  {% if account.bank_slug %}
+                  <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold tracking-tight
+                    {% if account.bank_slug == 'nubank' %}bg-purple-50 text-purple-700 border border-purple-200
+                    {% elif account.bank_slug == 'itau' %}bg-orange-50 text-orange-700 border border-orange-200
+                    {% elif account.bank_slug == 'bradesco' %}bg-blue-50 text-blue-700 border border-blue-200
+                    {% elif account.bank_slug == 'sicredi' %}bg-red-50 text-red-700 border border-red-200
+                    {% else %}bg-slate-50 text-slate-600 border border-slate-200{% endif %}">
+                    {{ account.bank_slug | upper }}
+                  </span>
+                  {% endif %}
+                </div>
+                <h3 class="text-base font-semibold text-slate-900 mt-1">{{ account.name }}</h3>
+              </div>
+              <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover/card:bg-slate-200 transition-colors">
+                {% if is_credito %}
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                {% else %}
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="space-y-2 mb-4">
+              {% if is_credito %}
+              <!-- Credit Card display -->
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-slate-400">Fatura atual</span>
+                <span class="text-sm font-bold {% if account.balance < 0 %}text-rose-600{% else %}text-slate-900{% endif %}">
+                  R$ {{ "%.2f"|format(account.balance|abs) }}
+                </span>
+              </div>
+              {% if account.credit_limit is not none and account.credit_limit > 0 %}
+              {% set used_pct = (account.balance|abs / account.credit_limit * 100) | round %}
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-slate-400">Limite total</span>
+                <span class="text-sm font-semibold text-slate-700">R$ {{ "%.2f"|format(account.credit_limit) }}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-slate-400">Limite disponível</span>
+                <span class="text-sm font-semibold text-emerald-600">R$ {{ "%.2f"|format((account.credit_limit - account.balance|abs) | max(0)) }}</span>
+              </div>
+              <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mt-2">
+                <div class="h-full rounded-full bg-gradient-to-r from-emerald-400 via-amber-400 to-rose-400 transition-all"
+                     style="width: {{ used_pct if used_pct <= 100 else 100 }}%">
+                </div>
+              </div>
+              <div class="flex items-center justify-between mt-1">
+                <span class="text-[10px] text-slate-400">Utilização</span>
+                <span class="text-[10px] font-medium {{ 'text-rose-500' if used_pct > 80 else 'text-slate-500' }}">{{ used_pct }}%</span>
+              </div>
+              {% endif %}
+
+              <!-- Invoice projection for next months -->
+              {% set invs = future_invoices_by_account_id.get(account.id | string, []) if future_invoices_by_account_id is defined else [] %}
+              {% if invs %}
+              <div class="pt-2 mt-2 border-t border-slate-100">
+                <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Faturas futuras</p>
+                {% for inv in invs %}
+                <div class="flex items-center justify-between text-xs">
+                  <span class="text-slate-500">{{ inv.month_ref }}</span>
+                  <span class="font-medium text-rose-500">R$ {{ "%.2f"|format(inv.amount) }}</span>
+                </div>
+                {% endfor %}
+              </div>
+              {% endif %}
+
+              {% else %}
+              <!-- Checking / Benefits display -->
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-slate-400">Saldo</span>
+                <span class="text-sm font-bold {% if account.balance < 0 %}text-rose-600{% else %}text-slate-900{% endif %}">
+                  R$ {{ "%.2f"|format(account.balance) }}
+                </span>
+              </div>
+              {% if account.credit_limit is not none %}
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-slate-400">Limite disponível</span>
+                <span class="text-sm font-semibold text-slate-700">R$ {{ "%.2f"|format(account.credit_limit) }}</span>
+              </div>
+              {% endif %}
+              {% endif %}
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="h-6 w-6 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
+                  {{ account.user.name[:2] | upper if account.user else '??' }}
+                </div>
+                <span class="text-xs text-slate-500">
+                  {{ account.user.name.split()[0] if account.user else '---' }}
+                </span>
+              </div>
+              {% if is_credito and account.credit_limit %}
+              <span class="text-[10px] text-slate-300">{{ account.type }}</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+  {% endfor %}
+
+  {% if not accounts %}
+  <div class="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+    <svg class="mx-auto h-12 w-12 text-slate-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+    <h3 class="text-lg font-semibold text-slate-700 mb-1">Nenhuma conta cadastrada</h3>
+    <p class="text-sm text-slate-400 mb-6">Adicione contas correntes, cartões de crédito ou benefícios para começar</p>
+    <button onclick="document.getElementById('nova-conta-modal').classList.remove('hidden')"
+            class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700">
+      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+      Adicionar Conta
+    </button>
+  </div>
+  {% endif %}
+</div>

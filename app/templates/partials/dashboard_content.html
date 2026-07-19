@@ -1,0 +1,192 @@
+{# --- KPI Cards --- #}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+
+  {# Card 1: Ganhos do Mês #}
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md transition-shadow">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
+        <svg class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      </div>
+      <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Ganhos</span>
+    </div>
+    <div class="text-2xl font-bold text-emerald-600">R$ {{ "%.2f"|format(kpis.income) }}</div>
+    <p class="text-[11px] text-slate-400 mt-1">{{ kpis.period_label }}</p>
+  </div>
+
+  {# Card 2: Gastos do Mês #}
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md transition-shadow">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center flex-shrink-0">
+        <svg class="w-5 h-5 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+      </div>
+      <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Gastos</span>
+    </div>
+    <div class="text-2xl font-bold text-rose-600">R$ {{ "%.2f"|format(kpis.expense) }}</div>
+    <p class="text-[11px] text-slate-400 mt-1">{{ kpis.period_label }}</p>
+  </div>
+
+  {# Card 3: Balanço Líquido #}
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md transition-shadow">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center flex-shrink-0">
+        <svg class="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
+      </div>
+      <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Balanço</span>
+    </div>
+    <div class="text-2xl font-bold {% if kpis.balance >= 0 %}text-indigo-600{% else %}text-rose-600{% endif %}">R$ {{ "%.2f"|format(kpis.balance) }}</div>
+    <p class="text-[11px] text-slate-400 mt-1">{{ kpis.period_label }}</p>
+  </div>
+
+  {# Card 4: Ritmo Semanal #}
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md transition-shadow">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+        <svg class="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+      </div>
+      <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Ritmo Semanal</span>
+    </div>
+    <div class="text-2xl font-bold text-slate-900">R$ {{ "%.2f"|format(kpis.weekly_current) }}</div>
+    <div class="mt-1.5 flex items-center gap-1.5">
+      {% if kpis.weekly_change_pct > 0 %}
+      <span class="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-rose-50 text-rose-600">
+        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+        +{{ kpis.weekly_change_pct }}%
+      </span>
+      <span class="text-[11px] text-slate-400">vs semana anterior</span>
+      {% elif kpis.weekly_change_pct < 0 %}
+      <span class="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-emerald-50 text-emerald-600">
+        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+        {{ kpis.weekly_change_pct }}%
+      </span>
+      <span class="text-[11px] text-slate-400">vs semana anterior</span>
+      {% else %}
+      <span class="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-slate-50 text-slate-500">
+        —
+      </span>
+      <span class="text-[11px] text-slate-400">sem variação</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{# --- Grid de Gráficos --- #}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+  {# Chart 1: Fluxo de Caixa #}
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="text-sm font-semibold text-slate-900">Fluxo de Caixa</h3>
+        <p class="text-xs text-slate-400 mt-0.5">Receitas vs Despesas mensais</p>
+      </div>
+      <div class="flex items-center gap-3 text-[11px] text-slate-500">
+        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>Receitas</span>
+        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>Despesas</span>
+      </div>
+    </div>
+    <div class="relative" style="height:260px">
+      <canvas id="chart-cashflow"></canvas>
+    </div>
+  </div>
+
+  {# Chart 2: Categorias (Donut) #}
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="text-sm font-semibold text-slate-900">Despesas por Categoria</h3>
+        <p class="text-xs text-slate-400 mt-0.5">{{ kpis.period_label }}</p>
+      </div>
+    </div>
+    <div class="relative" style="height:260px">
+      <canvas id="chart-categories"></canvas>
+    </div>
+  </div>
+
+  {# Chart 3: Evolução de Saldo #}
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="text-sm font-semibold text-slate-900">Evolução de Saldo</h3>
+        <p class="text-xs text-slate-400 mt-0.5">Histórico consolidado + previsão (tracejado)</p>
+      </div>
+    </div>
+    <div class="relative" style="height:260px">
+      <canvas id="chart-balance"></canvas>
+    </div>
+  </div>
+
+  {# Chart 4: Comprometimento Futuro #}
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="text-sm font-semibold text-slate-900">Comprometimento Futuro</h3>
+        <p class="text-xs text-slate-400 mt-0.5">Parcelas projetadas dos próximos 12 meses</p>
+      </div>
+    </div>
+    <div class="relative" style="height:260px">
+      <canvas id="chart-future"></canvas>
+    </div>
+  </div>
+</div>
+
+{# --- Análise por Membro --- #}
+<div class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+  {# Chart 5: Distribuição de Gastos do Mês por Membro (Donut) #}
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="text-sm font-semibold text-slate-900">Distribuição de Gastos do Mês</h3>
+        <p class="text-xs text-slate-400 mt-0.5">Participação de cada membro nas despesas</p>
+      </div>
+    </div>
+    {% if member_expenses.amounts %}
+    <div class="relative" style="height:260px">
+      <canvas id="chart-member-donut"></canvas>
+    </div>
+    {% else %}
+    <div class="flex items-center justify-center h-[260px] text-sm text-slate-400">Sem dados de gastos por membro</div>
+    {% endif %}
+  </div>
+
+  {# Chart 6: Histórico de Consumo por Membro (Stacked Bar) #}
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="text-sm font-semibold text-slate-900">Histórico de Consumo por Membro</h3>
+        <p class="text-xs text-slate-400 mt-0.5">Despesas mensais empilhadas por membro</p>
+      </div>
+    </div>
+    {% if member_evolution.labels %}
+    <div class="relative" style="height:260px">
+      <canvas id="chart-member-evolution"></canvas>
+    </div>
+    {% else %}
+    <div class="flex items-center justify-center h-[260px] text-sm text-slate-400">Sem dados de evolução por membro</div>
+    {% endif %}
+  </div>
+</div>
+
+{# --- Dados JSON para os gráficos (ocultos) --- #}
+<script type="application/json" id="cf-labels">{{ cash_flow.labels | tojson }}</script>
+<script type="application/json" id="cf-income">{{ cash_flow.income_data | tojson }}</script>
+<script type="application/json" id="cf-expense">{{ cash_flow.expense_data | tojson }}</script>
+<script type="application/json" id="cat-names">{{ categories.names | tojson }}</script>
+<script type="application/json" id="cat-values">{{ categories.amounts | tojson }}</script>
+<script type="application/json" id="cat-colors">{{ categories.colors | tojson }}</script>
+<script type="application/json" id="cat-total">{{ categories.total }}</script>
+<script type="application/json" id="be-labels">{{ balance_evo.labels | tojson }}</script>
+<script type="application/json" id="be-values">{{ balance_evo.amounts | tojson }}</script>
+<script type="application/json" id="bf-labels">{{ balance_forecast.labels | tojson }}</script>
+<script type="application/json" id="bf-historical">{{ balance_forecast.amounts | tojson }}</script>
+<script type="application/json" id="bf-forecast">{{ balance_forecast.forecast_values | tojson }}</script>
+<script type="application/json" id="bf-lower">{{ balance_forecast.lower_bound | tojson }}</script>
+<script type="application/json" id="bf-upper">{{ balance_forecast.upper_bound | tojson }}</script>
+<script type="application/json" id="fc-labels">{{ future_commitments.labels | tojson }}</script>
+<script type="application/json" id="fc-values">{{ future_commitments.amounts | tojson }}</script>
+<script type="application/json" id="me-names">{{ member_expenses.names | tojson }}</script>
+<script type="application/json" id="me-amounts">{{ member_expenses.amounts | tojson }}</script>
+<script type="application/json" id="me-colors">{{ member_expenses.colors | tojson }}</script>
+<script type="application/json" id="me-total">{{ member_expenses.total }}</script>
+<script type="application/json" id="mevo-labels">{{ member_evolution.labels | tojson }}</script>
+<script type="application/json" id="mevo-members">{{ member_evolution.members | tojson }}</script>

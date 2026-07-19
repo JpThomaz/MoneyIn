@@ -1,0 +1,76 @@
+<tr id="tx-row-{{ tx.id }}" class="bg-sky-50 border-b border-sky-200">
+  <td colspan="7" class="px-4 py-2">
+    <form id="edit-form-{{ tx.id }}"
+          hx-put="/api/transactions/{{ tx.id }}"
+          hx-target="#tx-row-{{ tx.id }}"
+          hx-swap="outerHTML"
+          class="flex flex-wrap items-end gap-3">
+      <input type="hidden" name="account_id" value="{{ tx.account_id }}" />
+      <input type="hidden" name="user_id" value="{{ tx.user_id or '' }}" />
+      <div class="flex flex-col gap-1">
+        <label class="text-[10px] font-semibold uppercase tracking-wider text-sky-600">Data</label>
+        <input type="date" name="date" value="{{ tx.date }}"
+               class="rounded-md border-sky-200 bg-white px-2 py-1.5 text-sm shadow-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-200 focus:outline-none w-32" />
+      </div>
+      <div class="flex flex-col gap-1 flex-1 min-w-[160px]">
+        <label class="text-[10px] font-semibold uppercase tracking-wider text-sky-600">Descrição</label>
+        <input type="text" name="description" value="{{ tx.description }}"
+               class="rounded-md border-sky-200 bg-white px-2 py-1.5 text-sm shadow-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-200 focus:outline-none w-full" />
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="text-[10px] font-semibold uppercase tracking-wider text-sky-600">Valor (R$)</label>
+        <input type="number" step="0.01" name="amount" value="{{ tx.amount }}"
+               class="rounded-md border-sky-200 bg-white px-2 py-1.5 text-sm shadow-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-200 focus:outline-none w-28 text-right" />
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="text-[10px] font-semibold uppercase tracking-wider text-sky-600">Conta</label>
+        <div class="flex items-center gap-1">
+          <select name="account_id"
+                  class="rounded-md border-sky-200 bg-white px-2 py-1.5 text-sm shadow-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-200 focus:outline-none">
+            {% for a in accounts %}
+            <option value="{{ a.id }}" {% if a.id == tx.account_id %}selected{% endif %}>{{ a.name }}</option>
+            {% endfor %}
+          </select>
+          <button type="button" onclick="document.getElementById('nova-conta-modal-statement').classList.remove('hidden')"
+                  class="rounded-md border border-sky-200 bg-white p-1 text-slate-400 hover:text-sky-600 hover:border-sky-300 hover:bg-sky-50 transition-colors"
+                  title="Criar nova conta">
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="text-[10px] font-semibold uppercase tracking-wider text-sky-600">Categoria</label>
+        <select name="category_id"
+                class="rounded-md border-sky-200 bg-white px-2 py-1.5 text-sm shadow-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-200 focus:outline-none">
+          <option value="">Sem categoria</option>
+          {% for c in categories %}
+          <option value="{{ c.id }}" {% if c.id == tx.category_id %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="text-[10px] font-semibold uppercase tracking-wider text-sky-600">Responsável</label>
+        <select name="user_id"
+                class="rounded-md border-sky-200 bg-white px-2 py-1.5 text-sm shadow-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-200 focus:outline-none">
+          <option value="">—</option>
+          {% for m in members %}
+          <option value="{{ m.id }}" {% if m.id == tx.user_id %}selected{% endif %}>{{ m.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="flex items-center gap-1 pb-1">
+        <button type="submit"
+                class="rounded-md bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-sky-700 transition-colors">
+          Salvar
+        </button>
+        <button type="button"
+                hx-get="/api/transactions/{{ tx.id }}"
+                hx-target="#tx-row-{{ tx.id }}"
+                hx-swap="outerHTML"
+                class="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+          Cancelar
+        </button>
+      </div>
+    </form>
+  </td>
+</tr>

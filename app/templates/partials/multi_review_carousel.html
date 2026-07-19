@@ -1,0 +1,723 @@
+<div id="main-upload-container" class="space-y-6">
+  {% set display_count = namespace(val=0) %}
+  {% for f in file_results %}
+    {% if f.error is none %}
+      {% set display_count.val = display_count.val + 1 %}
+    {% endif %}
+  {% endfor %}
+
+  {% if display_count.val == 0 %}
+  <div class="rounded-xl border border-red-200 bg-red-50 p-8 text-center shadow-sm">
+    <svg class="mx-auto h-12 w-12 text-red-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+    </svg>
+    <h2 class="text-lg font-semibold text-red-800">Nenhum arquivo válido processado</h2>
+    <p class="mt-1 text-sm text-red-600">Todos os arquivos apresentaram erros.</p>
+    <button hx-get="/upload" hx-target="#main-upload-container"
+            class="mt-4 inline-flex items-center gap-2 rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-red-700 border border-red-200 shadow-sm transition-colors hover:bg-red-50">
+      Tentar novamente
+    </button>
+  </div>
+  {% else %}
+
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h2 class="text-lg font-semibold text-slate-900">Revisão dos Arquivos</h2>
+      <p class="text-xs text-slate-400 mt-0.5">{{ display_count.val }} arquivo{{ 's' if display_count.val != 1 else '' }} processado{{ 's' if display_count.val != 1 else '' }} com sucesso</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+        <svg class="h-3.5 w-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        IA Gemini
+      </span>
+    </div>
+  </div>
+
+  <div id="carousel-container" class="relative">
+    {% set display_idx = namespace(val=0) %}
+    {% for f in file_results %}
+      {% if f.error is none %}
+      {% set idx = display_idx.val %}
+
+      {% if f.type is defined and f.type == 'password_needed' %}
+      {# --- Password needed card --- #}
+      <div class="carousel-item {% if idx != 0 %}hidden{% endif %}" data-index="{{ idx }}">
+        <div class="file-card-swap-target rounded-xl border border-amber-200 bg-white shadow-sm overflow-hidden">
+          <div class="bg-gradient-to-r from-amber-50 to-white border-b border-amber-100 px-6 py-4">
+            <div class="flex items-center gap-3">
+              <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-amber-100">
+                <svg class="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-sm font-semibold text-slate-900">Arquivo Protegido</h3>
+                <p class="text-xs text-amber-700 font-medium truncate max-w-[280px]">{{ f.filename }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-6">
+            <div class="flex items-center gap-2 mb-4">
+              <svg class="h-4 w-4 text-amber-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+              </svg>
+              <p class="text-sm text-slate-600">
+                Este arquivo está protegido por senha.<br>
+                <span class="text-xs text-slate-400">Informe a senha para desbloquear</span>
+              </p>
+            </div>
+
+            <form hx-post="/api/decrypt-statement"
+                  hx-target="closest .file-card-swap-target"
+                  hx-swap="outerHTML"
+                  class="space-y-3">
+              <input type="hidden" name="file_id" value="{{ f.file_id }}" />
+              <div class="flex items-center gap-2">
+                <input type="password" name="password" placeholder="Senha do PDF" autocomplete="off" required autofocus
+                       class="block w-full rounded-lg border-amber-300 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm placeholder-slate-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 focus:outline-none transition-colors" />
+                <button type="submit"
+                        class="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 flex-shrink-0">
+                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>
+                  Desbloquear
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% set display_idx.val = display_idx.val + 1 %}
+
+      {% else %}
+      {# --- Regular valid file card --- #}
+      <div class="carousel-item {% if idx != 0 %}hidden{% endif %}" data-index="{{ idx }}">
+        <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="bg-gradient-to-r from-slate-50 to-white border-b border-slate-100 px-6 py-4">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+              <div class="flex items-center gap-3">
+                <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-50">
+                  <svg class="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                </div>
+                <div>
+                  <h3 class="text-sm font-semibold text-slate-900">{{ f.filename }}</h3>
+                  <p class="text-xs text-slate-400">
+                    {% if f.doc_type == "EXTRATO" %}
+                    📄 Extrato
+                    {% elif f.doc_type == "FATURA" %}
+                    💳 Fatura
+                    {% else %}
+                    📄 Documento
+                    {% endif %}
+                    {% if f.bank_name %} — {{ f.bank_name }}{% endif %}
+                    {% if f.last_4 %} — ****{{ f.last_4 }}{% endif %}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {# --- Account Card --- #}
+          <div class="mx-6 mt-4">
+            <div class="rounded-xl border {% if f.account_exists %}border-emerald-200 bg-emerald-50/30{% else %}border-amber-200 bg-amber-50/30{% endif %} overflow-hidden">
+              <div class="p-4">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center gap-2">
+                    <svg class="h-4 w-4 {% if f.account_exists %}text-emerald-600{% else %}text-amber-500{% endif %}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                    </svg>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Conta</span>
+                  </div>
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium {% if f.account_exists %}bg-emerald-100 text-emerald-700{% else %}bg-amber-100 text-amber-700{% endif %}">
+                    {% if f.account_exists %}
+                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    Vinculada
+                    {% else %}
+                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01"/></svg>
+                    Pendente
+                    {% endif %}
+                  </span>
+                </div>
+
+                {% if f.account_exists %}
+                <div class="flex items-center gap-3">
+                  <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-100">
+                    <svg class="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                    </svg>
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-sm font-semibold text-slate-900">{{ f.account_name or 'Conta' }}</p>
+                    <p class="text-xs text-slate-500">
+                      {% if f.bank_name %}{{ f.bank_name }}{% endif %}
+                      {% if f.last_4 %} · ****{{ f.last_4 }}{% endif %}
+                      · {{ 'Cartão de Crédito' if f.doc_type == 'FATURA' else 'Conta Corrente' }}
+                    </p>
+                  </div>
+                  <button type="button" onclick="showAccountSelector(this, {{ idx }})"
+                          data-bank-slug="{{ f.bank_slug or '' }}"
+                          data-last-4="{{ f.last_4 or '' }}"
+                          data-doc-type="{{ f.doc_type or '' }}"
+                          class="text-xs font-medium text-emerald-600 hover:text-emerald-700 underline underline-offset-2 flex-shrink-0">
+                    Trocar
+                  </button>
+                </div>
+                {% else %}
+                <div class="space-y-3">
+                  <p class="text-sm text-slate-600">
+                    <span class="font-medium text-amber-700">Nenhuma conta vinculada</span>
+                  </p>
+                  {% if f.bank_slug %}
+                  <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+                    <span>{{ f.bank_name or f.bank_slug }}</span>
+                    {% if f.last_4 %}<span>****{{ f.last_4 }}</span>{% endif %}
+                    <span>{{ 'Cartão de Crédito' if f.doc_type == 'FATURA' else 'Conta Corrente' }}</span>
+                  </div>
+                  {% endif %}
+
+                  <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="quickCreateAccount(this, '{{ f.bank_slug }}', '{{ f.last_4 or '' }}', '{{ f.doc_type or '' }}', {{ idx }})"
+                            class="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-amber-700">
+                      <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                      + Criar {{ 'Cartão' if f.doc_type == 'FATURA' else 'Conta' }}
+                    </button>
+                    <span class="text-xs text-slate-400">ou</span>
+                    <select class="account-select text-xs rounded-lg border-slate-200 bg-white px-2 py-1.5 shadow-sm focus:border-emerald-400 focus:ring-1 focus:ring-emerald-200"
+                            onchange="onAccountSelect(this, {{ idx }})">
+                      <option value="">Selecionar existente...</option>
+                      {% for acct in household_accounts %}
+                      <option value="{{ acct.id }}" data-name="{{ acct.name }}">{% if acct.bank_slug %}{{ acct.bank_slug | capitalize }} — {% endif %}{{ acct.name }} ({{ 'Crédito' if acct.type == 'CREDITO' else 'Corrente' }}{% if acct.last_4_digits %} · ****{{ acct.last_4_digits }}{% endif %})</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          {% if f.doc_type == "EXTRATO" and f.saldo_final is not none %}
+          <div class="mx-6 mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+            <div class="flex items-center gap-3">
+              <div class="flex items-center justify-center w-9 h-9 rounded-full bg-emerald-100">
+                <svg class="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </div>
+              <div>
+                <p class="text-xs text-emerald-700 font-medium">Saldo em conta identificado</p>
+                <p class="text-lg font-bold text-emerald-800">R$ {{ "%.2f"|format(f.saldo_final) }}</p>
+                <p class="text-xs text-emerald-600">Será atualizado automaticamente ao confirmar</p>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          <form class="file-review-form space-y-4 p-6">
+            <input type="hidden" name="account_id" value="{{ f.account_id or '' }}" />
+            <input type="hidden" name="doc_type" value="{{ f.doc_type or '' }}" />
+            <input type="hidden" name="saldo_final" value="{{ f.saldo_final if f.saldo_final is not none else '' }}" />
+            <input type="hidden" name="filename" value="{{ f.filename }}" />
+            <input type="hidden" name="bank_name" value="{{ f.bank_name or '' }}" />
+            <input type="hidden" name="bank_slug" value="{{ f.bank_slug or '' }}" />
+            <input type="hidden" name="last_4" value="{{ f.last_4 or '' }}" />
+            <input type="hidden" name="mes_vencimento" value="{{ f.mes_vencimento or '' }}" />
+            <input type="hidden" name="ano_vencimento" value="{{ f.ano_vencimento or '' }}" />
+            <input type="hidden" name="extraction_import_id" value="{{ f.extraction_import_id or '' }}" />
+
+            <div class="overflow-hidden rounded-lg border border-slate-200">
+              <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-100">
+                  <thead>
+                    <tr class="bg-slate-50">
+                      <th class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Data</th>
+                      <th class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Descrição</th>
+                      <th class="px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Valor (R$)</th>
+                      <th class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Categoria</th>
+                      <th class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Responsável</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-50">
+                    {% for t in f.transactions %}
+                    <tr class="transaction-row transition-colors hover:bg-slate-50/50">
+                      <td class="px-3 py-2">
+                        <input type="date" class="tx-date block w-full rounded-md border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none" value="{{ t.data }}" required />
+                      </td>
+                      <td class="px-3 py-2 min-w-[180px]">
+                        <input type="text" class="tx-desc block w-full rounded-md border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none" value="{{ t.descricao }}" required />
+                        <input type="hidden" class="tx-installment-num" value="{{ t.installment_number | default(1) }}" />
+                        <input type="hidden" class="tx-total-installments" value="{{ t.total_installments | default(1) }}" />
+                        <input type="hidden" class="tx-reference-month" value="{{ t.reference_month or '' }}" />
+                        <input type="hidden" class="tx-reference-year" value="{{ t.reference_year or '' }}" />
+                        <input type="hidden" class="tx-description-clean" value="{{ t.description_clean or t.descricao }}" />
+                      </td>
+                      <td class="px-3 py-2">
+                        <input type="number" step="0.01" class="tx-amount block w-28 ml-auto rounded-md border-slate-200 bg-white px-2.5 py-1.5 text-sm text-right font-medium shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none {% if t.valor < 0 %}text-rose-600{% else %}text-emerald-600{% endif %}" value="{{ t.valor }}" required />
+                      </td>
+                      <td class="px-3 py-2">
+                        <select class="tx-category block w-full rounded-md border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none">
+                          <option value="">Sem categoria</option>
+                          {% for cat in categories %}
+                          <option value="{{ cat.id }}" {% if cat.name.lower() == (t.categoria or '').lower() %}selected{% endif %}>{{ cat.name }}</option>
+                          {% endfor %}
+                        </select>
+                        {% if t.categoria %}
+                        <input type="hidden" class="tx-categoria-name" value="{{ t.categoria }}" />
+                        {% endif %}
+                      </td>
+                      <td class="px-3 py-2">
+                        <select class="tx-user block w-full rounded-md border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none">
+                          {% for member in household_members %}
+                          <option value="{{ member.id }}" {% if member.id == current_user_id %}selected{% endif %}>{{ member.name }}</option>
+                          {% endfor %}
+                        </select>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+      {% set display_idx.val = display_idx.val + 1 %}
+      {% endif %}
+      {% endif %}
+
+    {% endfor %}
+
+    {% if display_count.val > 1 %}
+    <div class="flex items-center justify-between mt-4">
+      <button onclick="navigateCarousel(-1)"
+              class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed"
+              id="prev-btn">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        Anterior
+      </button>
+      <div class="flex items-center gap-1.5" id="carousel-dots">
+        {% for i in range(display_count.val) %}
+        <button onclick="goToCarousel({{ i }})"
+                class="w-2.5 h-2.5 rounded-full transition-all {% if i == 0 %}bg-emerald-500 w-4{% else %}bg-slate-300 hover:bg-slate-400{% endif %}"
+                data-dot="{{ i }}"></button>
+        {% endfor %}
+      </div>
+      <button onclick="navigateCarousel(1)"
+              class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed"
+              id="next-btn">
+        Próximo
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <button hx-get="/upload"
+            hx-target="#main-upload-container"
+            class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50">
+      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      Rejeitar Tudo
+    </button>
+    <div class="flex items-center gap-3">
+      <div id="confirm-loading" class="htmx-indicator flex items-center gap-2 text-sm text-slate-400">
+        <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+        </svg>
+        Salvando...
+      </div>
+      <button onclick="submitAllFiles()"
+              class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        Aprovar e Inserir Tudo
+      </button>
+    </div>
+  </div>
+{% endif %}
+</div>
+
+<script>
+  (function() {
+    var currentIndex = 0;
+    var totalItems = {{ display_count.val }};
+
+    window.goToCarousel = function(idx) {
+      if (idx < 0 || idx >= totalItems) return;
+      document.querySelectorAll('.carousel-item').forEach(function(el) {
+        el.classList.add('hidden');
+      });
+      var item = document.querySelector('.carousel-item[data-index="' + idx + '"]');
+      if (item) item.classList.remove('hidden');
+      document.querySelectorAll('#carousel-dots button').forEach(function(dot) {
+        dot.className = 'w-2.5 h-2.5 rounded-full transition-all bg-slate-300 hover:bg-slate-400';
+      });
+      var activeDot = document.querySelector('#carousel-dots button[data-dot="' + idx + '"]');
+      if (activeDot) activeDot.className = 'w-4 h-2.5 rounded-full transition-all bg-emerald-500';
+      var prevBtn = document.getElementById('prev-btn');
+      var nextBtn = document.getElementById('next-btn');
+      if (prevBtn) prevBtn.disabled = idx === 0;
+      if (nextBtn) nextBtn.disabled = idx === totalItems - 1;
+      currentIndex = idx;
+    };
+
+    window.navigateCarousel = function(dir) {
+      goToCarousel(currentIndex + dir);
+    };
+
+    window.submitAllFiles = function() {
+      var token = localStorage.getItem('token');
+      var filesData = [];
+      var missingAccount = false;
+      var firstMissingName = '';
+      document.querySelectorAll('.carousel-item').forEach(function(item) {
+        var form = item.querySelector('.file-review-form');
+        if (!form) return;
+        var accountId = form.querySelector('input[name="account_id"]').value;
+        if (!accountId) {
+          missingAccount = true;
+          var fname = form.querySelector('input[name="filename"]')?.value || '';
+          if (!firstMissingName) firstMissingName = fname;
+          return;
+        }
+        var docType = form.querySelector('input[name="doc_type"]').value;
+        var saldoFinal = form.querySelector('input[name="saldo_final"]').value;
+        var filename = form.querySelector('input[name="filename"]')?.value || '';
+        var bankName = form.querySelector('input[name="bank_name"]')?.value || '';
+        var bankSlug = form.querySelector('input[name="bank_slug"]')?.value || '';
+        var last4 = form.querySelector('input[name="last_4"]')?.value || '';
+        var mesVenc = form.querySelector('input[name="mes_vencimento"]')?.value || '';
+        var anoVenc = form.querySelector('input[name="ano_vencimento"]')?.value || '';
+        var extractionImportId = form.querySelector('input[name="extraction_import_id"]')?.value || '';
+          var rows = [];
+        item.querySelectorAll('.transaction-row').forEach(function(row) {
+          var catNameInput = row.querySelector('.tx-categoria-name');
+          var descInput = row.querySelector('.tx-desc');
+          var installmentNum = row.querySelector('.tx-installment-num');
+          var totalInstallments = row.querySelector('.tx-total-installments');
+          var descClean = row.querySelector('.tx-description-clean');
+          var refMonth = row.querySelector('.tx-reference-month');
+          var refYear = row.querySelector('.tx-reference-year');
+          rows.push({
+            data: row.querySelector('.tx-date').value,
+            descricao: descInput.value,
+            valor: parseFloat(row.querySelector('.tx-amount').value) || 0,
+            category_id: row.querySelector('.tx-category').value || null,
+            categoria: catNameInput ? catNameInput.value : null,
+            user_id: row.querySelector('.tx-user').value || null,
+            description_clean: descClean ? descClean.value : descInput.value,
+            installment_number: installmentNum ? parseInt(installmentNum.value) || 1 : 1,
+            total_installments: totalInstallments ? parseInt(totalInstallments.value) || 1 : 1,
+            reference_month: refMonth ? parseInt(refMonth.value) || null : null,
+            reference_year: refYear ? parseInt(refYear.value) || null : null,
+          });
+        });
+        filesData.push({
+          account_id: accountId,
+          doc_type: docType,
+          saldo_final: saldoFinal ? parseFloat(saldoFinal) : null,
+          filename: filename,
+          bank_name: bankName,
+          bank_slug: bankSlug || null,
+          last_4: last4 || null,
+          mes_vencimento: mesVenc || null,
+          ano_vencimento: anoVenc || null,
+          extraction_import_id: extractionImportId || null,
+          transactions: rows,
+        });
+      });
+
+      if (missingAccount) {
+        alert('Selecione ou crie uma conta para "' + firstMissingName + '" antes de confirmar.');
+        return;
+      }
+
+      var body = new URLSearchParams();
+      body.append('files', JSON.stringify(filesData));
+
+      var loadingDiv = document.getElementById('confirm-loading');
+      if (loadingDiv) loadingDiv.classList.remove('htmx-indicator');
+
+      fetch('/api/upload-statement/confirm', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: body
+      }).then(function(r) {
+        var importHeader = r.headers.get('X-Import-IDs');
+        if (importHeader) {
+          try {
+            var imports = JSON.parse(importHeader);
+            if (window.importNotifications) {
+              imports.forEach(function(imp) { window.importNotifications.addOptimisticImport(imp); });
+            }
+            if (window._importBC) {
+              imports.forEach(function(imp) { window._importBC.postMessage({ type: 'new-import', import: imp }); });
+            }
+          } catch(e) {}
+        }
+        return r.text();
+      }).then(function(html) {
+        document.getElementById('main-upload-container').outerHTML = html;
+      }).catch(function() {
+        if (loadingDiv) loadingDiv.classList.add('htmx-indicator');
+        alert('Erro ao salvar transações');
+      });
+    };
+
+    window.showAccountSelector = function(btn, idx) {
+      var accountCard = btn.closest('.rounded-xl');
+      if (!accountCard) return;
+      var existingSelect = accountCard.querySelector('select');
+      if (existingSelect) {
+        existingSelect.classList.toggle('hidden');
+        return;
+      }
+      var allOpts = '';
+      document.querySelectorAll('.account-select option').forEach(function(o) {
+        if (o.value) allOpts += o.outerHTML;
+      });
+      var slug = btn.getAttribute('data-bank-slug') || '';
+      var last4 = btn.getAttribute('data-last-4') || '';
+      var docType = btn.getAttribute('data-doc-type') || '';
+      var div = document.createElement('div');
+      div.className = 'mt-2';
+      div.innerHTML = '<select class="block w-full rounded-lg border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200" onchange="onAccountSelect(this, ' + idx + ')">' +
+        '<option value="">Trocar conta...</option>' +
+        '<option value="__create__">+ Criar nova conta</option>' +
+        allOpts + '</select>';
+      var target = accountCard.querySelector('.flex.items-center.gap-3');
+      if (target) target.after(div);
+    };
+
+    window.onAccountSelect = function(select, idx) {
+      var val = select.value;
+      if (!val) return;
+      if (val === '__create__') {
+        var btn = select.closest('.rounded-xl').querySelector('button[data-bank-slug]');
+        if (btn) {
+          quickCreateAccount(btn, btn.getAttribute('data-bank-slug') || '', btn.getAttribute('data-last-4') || '', btn.getAttribute('data-doc-type') || '', idx);
+        }
+        return;
+      }
+      var form;
+      if (idx >= 0) {
+        var item = document.querySelector('.carousel-item[data-index="' + idx + '"]');
+        if (item) form = item.querySelector('.file-review-form');
+      } else {
+        form = select.closest('.file-review-form');
+      }
+      if (!form) return;
+      var accountInput = form ? form.querySelector('input[name="account_id"]') : null;
+      if (accountInput) accountInput.value = val;
+
+      var selectedOption = select.options[select.selectedIndex];
+      var name = selectedOption.textContent.trim();
+      var accountCard = select.closest('.rounded-xl');
+      if (accountCard) {
+        accountCard.className = 'rounded-xl border border-emerald-200 bg-emerald-50/30 overflow-hidden';
+        accountCard.innerHTML =
+          '<div class="p-4">' +
+            '<div class="flex items-center justify-between mb-3">' +
+              '<div class="flex items-center gap-2">' +
+                '<svg class="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>' +
+                '<span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Conta</span>' +
+              '</div>' +
+              '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">' +
+                '<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>' +
+                'Vinculada' +
+              '</span>' +
+            '</div>' +
+            '<div class="flex items-center gap-3">' +
+              '<div class="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-100">' +
+                '<svg class="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>' +
+              '</div>' +
+              '<div class="flex-1">' +
+                '<p class="text-sm font-semibold text-slate-900">' + escapeHtml(name) + '</p>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+      }
+
+      var sourceItem = select.closest('.carousel-item');
+      if (sourceItem) {
+        var sourceCreateBtn = sourceItem.querySelector('button[onclick*="quickCreateAccount"]');
+        if (sourceCreateBtn) {
+          var onclick = sourceCreateBtn.getAttribute('onclick') || '';
+          var match = onclick.match(/quickCreateAccount\(this,\s*'([^']*)',\s*'([^']*)',\s*'([^']*)'/);
+          if (match) {
+            var srcBankSlug = match[1];
+            var srcLast4 = match[2];
+            var srcDocType = match[3];
+            var allItems = document.querySelectorAll('.carousel-item');
+            allItems.forEach(function(item) {
+              if (item === sourceItem) return;
+              var itemBtn = item.querySelector('button[onclick*="quickCreateAccount"]');
+              if (itemBtn) {
+                var itemOnclick = itemBtn.getAttribute('onclick') || '';
+                var itemMatch = itemOnclick.match(/quickCreateAccount\(this,\s*'([^']*)',\s*'([^']*)',\s*'([^']*)'/);
+                if (itemMatch && itemMatch[1] === srcBankSlug && itemMatch[2] === srcLast4 && itemMatch[3] === srcDocType) {
+                  var itemInput = item.querySelector('input[name="account_id"]');
+                  if (itemInput && itemInput.value !== val) {
+                    itemInput.value = val;
+                    var itemCard = itemBtn.closest('.rounded-xl');
+                    if (itemCard) {
+                      itemCard.className = 'rounded-xl border border-emerald-200 bg-emerald-50/30 overflow-hidden';
+                      itemCard.innerHTML =
+                        '<div class="p-4">' +
+                          '<div class="flex items-center justify-between mb-3">' +
+                            '<div class="flex items-center gap-2">' +
+                              '<svg class="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>' +
+                              '<span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Conta</span>' +
+                            '</div>' +
+                            '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">' +
+                              '<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>' +
+                              'Vinculada' +
+                            '</span>' +
+                          '</div>' +
+                          '<div class="flex items-center gap-3">' +
+                            '<div class="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-100">' +
+                              '<svg class="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>' +
+                            '</div>' +
+                            '<div class="flex-1">' +
+                              '<p class="text-sm font-semibold text-slate-900">' + escapeHtml(name) + '</p>' +
+                            '</div>' +
+                          '</div>' +
+                        '</div>';
+                    }
+                  }
+                }
+              }
+            });
+          }
+        }
+      }
+    };
+    window.quickCreateAccount = function(btn, bankSlug, last4, docType, idx) {
+      var token = localStorage.getItem('token');
+      btn.disabled = true;
+      btn.textContent = 'Criando...';
+
+      var body = new URLSearchParams();
+      body.append('bank_slug', bankSlug);
+      body.append('last_4', last4);
+      body.append('doc_type', docType);
+
+      fetch('/api/upload-statement/quick-create-account', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: body
+      }).then(function(r) {
+        return r.text().then(function(text) {
+          try { return JSON.parse(text); } catch(e) { throw new Error(text); }
+        });
+      }).then(function(data) {
+        if (data.status === 'success') {
+          function applyAccountToCard(cardEl) {
+            var accountInput = cardEl.querySelector('input[name="account_id"]');
+            if (accountInput) accountInput.value = data.account_id;
+
+            var accountCard = cardEl.querySelector('.rounded-xl.border.border-amber-200, .rounded-xl.border-dashed');
+            if (!accountCard) {
+              var candidates = cardEl.querySelectorAll('.rounded-xl');
+              for (var i = 0; i < candidates.length; i++) {
+                if (candidates[i].querySelector('select.account-select') || candidates[i].querySelector('button[onclick*="quickCreateAccount"]')) {
+                  accountCard = candidates[i];
+                  break;
+                }
+              }
+            }
+            if (accountCard) {
+              accountCard.className = 'rounded-xl border border-emerald-200 bg-emerald-50/30 overflow-hidden';
+              accountCard.innerHTML =
+                '<div class="p-4">' +
+                  '<div class="flex items-center justify-between mb-3">' +
+                    '<div class="flex items-center gap-2">' +
+                      '<svg class="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>' +
+                      '<span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Conta</span>' +
+                    '</div>' +
+                    '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">' +
+                      '<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>' +
+                      'Vinculada' +
+                    '</span>' +
+                  '</div>' +
+                  '<div class="flex items-center gap-3">' +
+                    '<div class="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-100">' +
+                      '<svg class="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>' +
+                    '</div>' +
+                    '<div class="flex-1">' +
+                      '<p class="text-sm font-semibold text-slate-900">' + escapeHtml(data.account_name || 'Conta') + '</p>' +
+                    '</div>' +
+                  '</div>' +
+                '</div>';
+            }
+          }
+
+          applyAccountToCard(btn.closest('.carousel-item') || btn.closest('.file-card-swap-target'));
+
+          var allItems = document.querySelectorAll('.carousel-item');
+          allItems.forEach(function(item) {
+            var itemBankSlug = '';
+            var itemLast4 = '';
+            var itemDocType = '';
+            var createBtn = item.querySelector('button[onclick*="quickCreateAccount"]');
+            if (createBtn) {
+              var onclick = createBtn.getAttribute('onclick') || '';
+              var match = onclick.match(/quickCreateAccount\(this,\s*'([^']*)',\s*'([^']*)',\s*'([^']*)'/);
+              if (match) {
+                itemBankSlug = match[1];
+                itemLast4 = match[2];
+                itemDocType = match[3];
+              }
+            }
+            if (itemBankSlug === bankSlug && itemLast4 === last4 && itemDocType === docType) {
+              var existingInput = item.querySelector('input[name="account_id"]');
+              if (existingInput && existingInput.value !== data.account_id) {
+                applyAccountToCard(item);
+              }
+            }
+          });
+        } else {
+          var errMsg = data.detail;
+          if (Array.isArray(errMsg)) errMsg = errMsg.map(function(e) { return e.msg || JSON.stringify(e); }).join('; ');
+          alert(errMsg || 'Erro ao criar conta');
+          console.error('quickCreateAccount error:', data);
+          btn.disabled = false;
+          btn.textContent = '+ Cadastrar';
+        }
+      }).catch(function(err) {
+        alert('Erro ao criar conta: ' + (err.message || err));
+        console.error('quickCreateAccount exception:', err);
+        btn.disabled = false;
+        btn.textContent = '+ Cadastrar';
+      });
+    };
+
+    var token = localStorage.getItem('token');
+    if (token) {
+      htmx.on('htmx:configRequest', function(detail) {
+        detail.headers['Authorization'] = 'Bearer ' + token;
+      });
+    }
+
+    htmx.on('htmx:beforeSwap', function(evt) {
+      if (evt.detail.target && evt.detail.target.id === 'main-upload-container') {
+        if (evt.detail.xhr.status >= 400) {
+          var errorDiv = document.getElementById('upload-error');
+          if (errorDiv) {
+            errorDiv.classList.remove('hidden');
+            try {
+              var resp = JSON.parse(evt.detail.xhr.responseText);
+              errorDiv.textContent = resp.detail || 'Erro ao processar arquivo. Tente novamente.';
+            } catch (e) {
+              errorDiv.textContent = 'Erro ao processar arquivo. Tente novamente.';
+            }
+          }
+          evt.detail.shouldSwap = false;
+        }
+      }
+    });
+  })();
+</script>

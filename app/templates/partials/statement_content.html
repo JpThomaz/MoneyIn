@@ -1,0 +1,24 @@
+<div id="statement-content" class="space-y-4">
+  <!-- SUMMARY CARDS -->
+  <div class="grid grid-cols-3 gap-4">
+    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Receitas</p>
+      <p class="mt-1 text-xl font-bold text-emerald-600">+ R$ {{ "%.2f"|format(total_income) }}</p>
+    </div>
+    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Despesas</p>
+      <p class="mt-1 text-xl font-bold text-rose-600">- R$ {{ "%.2f"|format(total_expense) }}</p>
+    </div>
+    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Saldo do Mês</p>
+      <p class="mt-1 text-xl font-bold {% if balance >= 0 %}text-emerald-600{% else %}text-rose-600{% endif %}">
+        {% if balance >= 0 %}+{% endif %}R$ {{ "%.2f"|format(balance) }}
+      </p>
+    </div>
+  </div>
+
+  <!-- TRANSACTION TABLE -->
+  {% with transactions=transactions, accounts_map=accounts_map, categories_map=categories_map, members_map=members_map, current_user_id=current_user_id, sort_by=sort_by|default('date'), sort_dir=sort_dir|default('desc'), search=search|default('') %}
+    {% include "partials/transaction_table.html" %}
+  {% endwith %}
+</div>

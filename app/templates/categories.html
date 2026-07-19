@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+{% block title %}Categorias — Money In{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <h1 class="text-2xl font-bold text-slate-900">Categorias</h1>
+  <p class="text-sm text-slate-500 mt-1">Gerencie as categorias de transações da sua família</p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="space-y-6">
+    <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 class="text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
+        <svg class="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+        Nova Categoria
+      </h2>
+      <form hx-post="/api/categorias" hx-target="#category-grid" hx-swap="outerHTML" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Nome</label>
+          <input type="text" name="name" required
+                 class="block w-full rounded-lg border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none transition-colors"
+                 placeholder="Ex: Mercado, Combustível..." />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Cor</label>
+            <input type="color" name="color" value="#10b981"
+                   class="block w-full h-10 rounded-lg border-slate-300 bg-white shadow-sm cursor-pointer focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Tipo</label>
+            <select name="type" required
+                    class="block w-full rounded-lg border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none transition-colors">
+              <option value="expense">Despesa</option>
+              <option value="income">Receita</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit"
+                class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+          Criar Categoria
+        </button>
+      </form>
+    </div>
+
+    <div id="category-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {% for cat in categories %}
+      <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition-all group">
+        <div class="flex items-start justify-between">
+          <div class="flex items-center gap-3">
+            <span class="inline-block w-4 h-4 rounded-full flex-shrink-0" style="background-color: {{ cat.color }}"></span>
+            <div>
+              <p class="text-sm font-medium text-slate-900">{{ cat.name }}</p>
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+                {% if cat.household_id is none %}
+                  bg-slate-100 text-slate-500
+                {% else %}
+                  bg-emerald-50 text-emerald-600
+                {% endif %}">
+                {% if cat.household_id is none %}
+                  Sistema
+                {% else %}
+                  Personalizada
+                {% endif %}
+              </span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-medium px-2 py-0.5 rounded-md
+              {% if cat.type == 'income' %}bg-emerald-50 text-emerald-600{% else %}bg-rose-50 text-rose-600{% endif %}">
+              {{ 'Receita' if cat.type == 'income' else 'Despesa' }}
+            </span>
+            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button onclick="openEditCategory('{{ cat.id }}', '{{ cat.name }}', '{{ cat.color }}', '{{ cat.type }}')"
+                      class="p-1.5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+              </button>
+              <button hx-delete="/api/categorias/{{ cat.id }}"
+                      hx-target="#category-grid"
+                      hx-swap="outerHTML"
+                      hx-confirm="Remover categoria '{{ cat.name }}'?"
+                      class="p-1.5 rounded-md text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+    <h2 class="text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
+      <svg class="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      Gastos por Categoria
+    </h2>
+    <p class="text-xs text-slate-400 mb-4">Distribuição de despesas no mês corrente</p>
+    <div id="category-pie-chart" class="-mx-2"></div>
+    {% if not category_spending %}
+    <div class="py-8 text-center">
+      <svg class="mx-auto h-10 w-10 text-slate-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      <p class="text-sm text-slate-400">Nenhum gasto registrado no mês</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+</div>
+
+<div id="edit-categoria-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+  <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl border border-slate-200">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-semibold text-slate-900">Editar Categoria</h2>
+      <button type="button" onclick="document.getElementById('edit-categoria-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 transition-colors">
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <form id="edit-categoria-form" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Nome</label>
+        <input type="text" name="name" id="edit-cat-name" required
+               class="block w-full rounded-lg border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none transition-colors" />
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Cor</label>
+          <input type="color" name="color" id="edit-cat-color"
+                 class="block w-full h-10 rounded-lg border-slate-300 bg-white shadow-sm cursor-pointer focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Tipo</label>
+          <select name="type" id="edit-cat-type" required
+                  class="block w-full rounded-lg border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none transition-colors">
+            <option value="expense">Despesa</option>
+            <option value="income">Receita</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button type="button" onclick="document.getElementById('edit-categoria-modal').classList.add('hidden')"
+                class="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50">
+          Cancelar
+        </button>
+        <button type="submit"
+                class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700">
+          Salvar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function() {
+    var token = localStorage.getItem('token');
+    if (!token) { window.location.href = '/'; return; }
+    htmx.on('htmx:configRequest', function(detail) {
+      detail.headers['Authorization'] = 'Bearer ' + token;
+    });
+  })();
+
+  {% if category_spending %}
+  (function() {
+    var labels = {{ chart_labels | tojson }};
+    var values = {{ chart_values | tojson }};
+    var colors = {{ chart_colors | tojson }};
+
+    if (labels.length && values.length) {
+      var options = {
+        chart: { type: 'donut', height: 300, fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' },
+        series: values,
+        labels: labels,
+        colors: colors,
+        legend: { position: 'bottom', fontSize: '12px', labels: { colors: '#475569' } },
+        dataLabels: { enabled: true, formatter: function(val) { return val.toFixed(1) + '%'; }, style: { fontSize: '11px' } },
+        plotOptions: { pie: { donut: { size: '55%', labels: { show: true, total: { show: true, label: 'Total', fontSize: '13px', fontWeight: 600, color: '#0f172a' } } } } },
+        tooltip: { y: { formatter: function(val) { return 'R$ ' + val.toFixed(2); } } }
+      };
+      var chart = new ApexCharts(document.querySelector('#category-pie-chart'), options);
+      chart.render();
+    }
+  })();
+  {% endif %}
+
+  var editCategoryId = null;
+  function openEditCategory(id, name, color, type) {
+    editCategoryId = id;
+    document.getElementById('edit-cat-name').value = name;
+    document.getElementById('edit-cat-color').value = color;
+    document.getElementById('edit-cat-type').value = type;
+    document.getElementById('edit-categoria-modal').classList.remove('hidden');
+  }
+
+  document.getElementById('edit-categoria-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    if (!editCategoryId) return;
+    var formData = new FormData(e.target);
+    var res = await fetch('/api/categorias/' + editCategoryId, {
+      method: 'PUT',
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+      body: formData
+    });
+    if (res.ok) {
+      var html = await res.text();
+      document.getElementById('category-grid').outerHTML = html;
+      document.getElementById('edit-categoria-modal').classList.add('hidden');
+    }
+  });
+</script>
+{% endblock %}

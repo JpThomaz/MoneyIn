@@ -1,0 +1,38 @@
+{% if insights %}
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+  {% for insight in insights %}
+  <div class="rounded-xl border p-4 shadow-sm transition-all hover:shadow-md
+    {% if insight.type == 'positive' %}border-emerald-200 bg-emerald-50/60
+    {% elif insight.type == 'warning' %}border-amber-200 bg-amber-50/60
+    {% else %}border-indigo-200 bg-indigo-50/60{% endif %}">
+    <div class="flex items-start gap-3">
+      <div class="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg
+        {% if insight.type == 'positive' %}bg-emerald-100 text-emerald-600
+        {% elif insight.type == 'warning' %}bg-amber-100 text-amber-600
+        {% else %}bg-indigo-100 text-indigo-600{% endif %}">
+        {% if insight.type == 'positive' %}
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        {% elif insight.type == 'warning' %}
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+        {% else %}
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+        {% endif %}
+      </div>
+      <div class="min-w-0 flex-1">
+        <p class="text-xs font-semibold uppercase tracking-wider
+          {% if insight.type == 'positive' %}text-emerald-600
+          {% elif insight.type == 'warning' %}text-amber-600
+          {% else %}text-indigo-600{% endif %}">
+          {{ insight.title }}
+        </p>
+        <p class="mt-1 text-sm text-slate-700 leading-relaxed">{{ insight.text }}</p>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4 text-center text-sm text-slate-400">
+  Nenhum insight disponível no momento.
+</div>
+{% endif %}

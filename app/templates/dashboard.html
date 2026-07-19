@@ -1,0 +1,425 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — Money In{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  <div>
+    <h1 class="text-2xl font-bold text-slate-900">Dashboard</h1>
+    <p class="text-sm text-slate-500 mt-1">Visão consolidada das finanças da família</p>
+  </div>
+
+  <!-- Filtro de Período -->
+  <div class="flex items-center gap-2">
+    <label for="period-select" class="text-xs font-medium text-slate-400 uppercase tracking-wider">Período</label>
+    <select id="period-select"
+            hx-get="/dashboard/partials"
+            hx-target="#dashboard-content"
+            hx-swap="innerHTML"
+            hx-trigger="change"
+            name="period"
+            class="rounded-lg border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 cursor-pointer">
+      <option value="this_month" {% if period == 'this_month' %}selected{% endif %}>Este mês</option>
+      <option value="last_3_months" {% if period == 'last_3_months' %}selected{% endif %}>Últimos 3 meses</option>
+      <option value="last_6_months" {% if period == 'last_6_months' %}selected{% endif %}>Últimos 6 meses</option>
+      <option value="last_12_months" {% if period == 'last_12_months' %}selected{% endif %}>Últimos 12 meses</option>
+    </select>
+  </div>
+</div>
+
+{# --- Destaques da IA (Lazy Load) --- #}
+<div id="insights-section" class="mb-6">
+  <div class="flex items-center gap-2 mb-3">
+    <svg class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+    <h2 class="text-sm font-semibold text-slate-900">Recomendações do Oráculo</h2>
+  </div>
+  <div hx-get="/api/analytics/insights"
+       hx-trigger="load"
+       hx-swap="innerHTML"
+       hx-indicator="#insights-skeleton">
+    <div id="insights-skeleton" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="animate-pulse bg-slate-200 h-24 rounded-xl"></div>
+      <div class="animate-pulse bg-slate-200 h-24 rounded-xl"></div>
+      <div class="animate-pulse bg-slate-200 h-24 rounded-xl"></div>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-6">
+  {# --- Main Dashboard Content --- #}
+  <div id="dashboard-content">
+    {% include 'partials/dashboard_content.html' ignore missing %}
+  </div>
+
+  {# --- Chat Widget --- #}
+  <style>
+    .htmx-indicator { display: none !important; }
+    .htmx-request .htmx-indicator, .htmx-request.htmx-indicator { display: flex !important; }
+  </style>
+
+  <div class="flex flex-col h-[450px] bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <!-- Header do Chat -->
+    <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+      <div class="flex items-center gap-2">
+        <span class="relative flex h-3 w-3">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+        </span>
+        <span class="font-semibold text-slate-800 text-sm">Oráculo IA</span>
+      </div>
+    </div>
+
+    <!-- Container de Mensagens -->
+    <div id="chat-messages-container" class="flex-1 p-4 overflow-y-auto space-y-4">
+      <div class="flex justify-start">
+        <div class="bg-slate-100 text-slate-800 rounded-2xl px-4 py-2.5 max-w-[85%] text-sm">
+          Olá! Sou o Oráculo da família. Pergunte-me qualquer coisa sobre seus gastos, faturas futuras ou saúde financeira.
+        </div>
+      </div>
+    </div>
+
+    <!-- Indicador de Carregamento (HTMX Spinner) -->
+    <div id="chat-spinner" class="htmx-indicator px-4 py-2 flex justify-start items-center">
+      <div class="bg-slate-100 rounded-2xl px-4 py-3 flex items-center gap-1.5 max-w-[85%]">
+        <span class="text-xs text-slate-500 mr-1">Oráculo está processando</span>
+        <div class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
+        <div class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
+        <div class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" style="animation-delay: 300ms"></div>
+      </div>
+    </div>
+
+    <!-- Sugestões Rápidas -->
+    <div id="chat-suggestions" class="px-4 pb-2 flex flex-wrap gap-2 flex-shrink-0">
+      <button onclick="askOracle('Como estão nossos gastos este mês?')"
+              class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-medium text-slate-600 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 transition-colors cursor-pointer">
+        Como estão nossos gastos?
+      </button>
+      <button onclick="askOracle('Quanto temos de parcelas nos próximos meses?')"
+              class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-medium text-slate-600 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 transition-colors cursor-pointer">
+        Parcelas futuras?
+      </button>
+      <button onclick="askOracle('Qual é o nosso maior gargalo financeiro?')"
+              class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-medium text-slate-600 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 transition-colors cursor-pointer">
+        Maior gargalo?
+      </button>
+    </div>
+
+    <!-- Form de Envio -->
+    <form id="chat-form"
+          hx-post="/api/chat/ask"
+          hx-target="#chat-messages-container"
+          hx-swap="beforeend"
+          hx-indicator="#chat-spinner"
+          class="p-3 bg-slate-50 border-t border-slate-200 flex gap-2">
+      <input type="text"
+             name="message"
+             required
+             autocomplete="off"
+             placeholder="Pergunte ao Oráculo..."
+             class="flex-1 px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+      <button type="submit"
+              class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors">
+        Perguntar
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+  var token = localStorage.getItem('token');
+  if (!token) { window.location.href = '/'; return; }
+  htmx.on('htmx:configRequest', function(d) { d.headers['Authorization'] = 'Bearer ' + token; });
+})();
+
+/* Destrói instâncias antigas e recria gráficos */
+var _chartInstances = {};
+function getOrCreate(canvasId, config) {
+  if (_chartInstances[canvasId]) {
+    _chartInstances[canvasId].destroy();
+  }
+  var ctx = document.getElementById(canvasId);
+  if (!ctx) return null;
+  _chartInstances[canvasId] = new Chart(ctx, config);
+  return _chartInstances[canvasId];
+}
+
+function renderAllCharts() {
+  var fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+
+  /* --- Chart 1: Fluxo de Caixa --- */
+  var cfLabels = JSON.parse(document.getElementById('cf-labels')?.textContent || '[]');
+  var cfInc = JSON.parse(document.getElementById('cf-income')?.textContent || '[]');
+  var cfExp = JSON.parse(document.getElementById('cf-expense')?.textContent || '[]');
+  getOrCreate('chart-cashflow', {
+    type: 'bar',
+    data: {
+      labels: cfLabels,
+      datasets: [
+        { label: 'Receitas', data: cfInc, backgroundColor: 'rgba(16,185,129,0.75)', borderRadius: 6, barPercentage: 0.6 },
+        { label: 'Despesas', data: cfExp, backgroundColor: 'rgba(244,63,94,0.75)', borderRadius: 6, barPercentage: 0.6 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'circle', padding: 16, font: { size: 12 } } },
+        tooltip: { callbacks: { label: function(c) { return c.dataset.label + ': ' + fmt.format(c.raw); } } } },
+      scales: { x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: { ticks: { callback: function(v) { return 'R$ ' + (v/1000).toFixed(0) + 'k'; }, font: { size: 11 } }, grid: { color: '#f1f5f9' } } }
+    }
+  });
+
+  /* --- Chart 2: Categorias (Donut) --- */
+  var catNames = JSON.parse(document.getElementById('cat-names')?.textContent || '[]');
+  var catVals = JSON.parse(document.getElementById('cat-values')?.textContent || '[]');
+  var catCols = JSON.parse(document.getElementById('cat-colors')?.textContent || '[]');
+  var catTotal = parseFloat(document.getElementById('cat-total')?.textContent || '0');
+  getOrCreate('chart-categories', {
+    type: 'doughnut',
+    data: {
+      labels: catNames,
+      datasets: [{ data: catVals, backgroundColor: catCols, borderWidth: 2, borderColor: '#ffffff', hoverOffset: 6 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '68%',
+      plugins: {
+        legend: { position: 'right', labels: { usePointStyle: true, pointStyle: 'circle', padding: 12, font: { size: 11 } } },
+        tooltip: { callbacks: { label: function(c) { return c.label + ': ' + fmt.format(c.raw); } } }
+      }
+    },
+    plugins: [{
+      id: 'centerText',
+      afterDraw: function(chart) {
+        var ctx = chart.ctx;
+        var w = chart.width, h = chart.height;
+        ctx.save();
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        var cx = chart.chartArea.left + (chart.chartArea.right - chart.chartArea.left) / 2;
+        var cy = chart.chartArea.top + (chart.chartArea.bottom - chart.chartArea.top) / 2;
+        ctx.font = 'bold 18px Inter, system-ui, sans-serif';
+        ctx.fillStyle = '#1e293b';
+        ctx.fillText(fmt.format(catTotal), cx, cy - 8);
+        ctx.font = '11px Inter, system-ui, sans-serif';
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText('Total', cx, cy + 12);
+        ctx.restore();
+      }
+    }]
+  });
+
+  /* --- Chart 3: Evolução de Saldo + Previsão --- */
+  var bfLabels   = JSON.parse(document.getElementById('bf-labels')?.textContent   || '[]');
+  var bfHistor   = JSON.parse(document.getElementById('bf-historical')?.textContent || '[]');
+  var bfForecast = JSON.parse(document.getElementById('bf-forecast')?.textContent  || '[]');
+  var bfLower    = JSON.parse(document.getElementById('bf-lower')?.textContent     || '[]');
+  var bfUpper    = JSON.parse(document.getElementById('bf-upper')?.textContent     || '[]');
+  getOrCreate('chart-balance', {
+    type: 'line',
+    data: {
+      labels: bfLabels,
+      datasets: [
+        { /* Confidence band upper */
+          label: 'Limite superior',
+          data: bfUpper,
+          borderColor: 'transparent',
+          backgroundColor: 'rgba(99,102,241,0.12)',
+          fill: '+1', pointRadius: 0, borderWidth: 0,
+        },
+        { /* Confidence band lower */
+          label: 'Limite inferior',
+          data: bfLower,
+          borderColor: 'transparent',
+          backgroundColor: 'rgba(99,102,241,0.12)',
+          fill: false, pointRadius: 0, borderWidth: 0,
+        },
+        { /* Forecast line */
+          label: 'Previsão',
+          data: bfForecast,
+          borderColor: '#6366f1',
+          borderDash: [6, 4],
+          borderWidth: 2.5,
+          pointRadius: 0,
+          pointBackgroundColor: '#6366f1',
+          tension: 0.35,
+          spanGaps: false,
+        },
+        { /* Historical line */
+          label: 'Saldo',
+          data: bfHistor,
+          borderColor: '#6366f1',
+          backgroundColor: 'rgba(99,102,241,0.08)',
+          borderWidth: 2.5,
+          pointRadius: 4,
+          pointBackgroundColor: '#6366f1',
+          fill: true,
+          tension: 0.35,
+        },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          filter: function(c) { return c.dataset.label !== 'Limite superior' && c.dataset.label !== 'Limite inferior'; },
+          callbacks: { label: function(c) { return c.dataset.label + ': ' + fmt.format(c.raw); } },
+        },
+      },
+      scales: { x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: { ticks: { callback: function(v) { return 'R$ ' + (v/1000).toFixed(0) + 'k'; }, font: { size: 11 } }, grid: { color: '#f1f5f9' } } }
+    }
+  });
+
+  /* --- Chart 4: Comprometimento Futuro --- */
+  var fcLabels = JSON.parse(document.getElementById('fc-labels')?.textContent || '[]');
+  var fcValues = JSON.parse(document.getElementById('fc-values')?.textContent || '[]');
+  getOrCreate('chart-future', {
+    type: 'bar',
+    data: {
+      labels: fcLabels,
+      datasets: [{
+        label: 'Parcelas futuras', data: fcValues,
+        backgroundColor: 'rgba(251,191,36,0.7)', borderRadius: 6, barPercentage: 0.55,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: function(c) { return fmt.format(c.raw); } } } },
+      scales: { x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: { ticks: { callback: function(v) { return 'R$ ' + (v/1000).toFixed(1) + 'k'; }, font: { size: 11 } }, grid: { color: '#f1f5f9' } } }
+    }
+  });
+
+  /* --- Chart 5: Distribuição de Gastos por Membro (Donut) --- */
+  var meNames = JSON.parse(document.getElementById('me-names')?.textContent || '[]');
+  var meAmounts = JSON.parse(document.getElementById('me-amounts')?.textContent || '[]');
+  var meColors = JSON.parse(document.getElementById('me-colors')?.textContent || '[]');
+  var meTotal = parseFloat(document.getElementById('me-total')?.textContent || '0');
+  if (meNames.length > 0) {
+    getOrCreate('chart-member-donut', {
+      type: 'doughnut',
+      data: {
+        labels: meNames,
+        datasets: [{ data: meAmounts, backgroundColor: meColors, borderWidth: 2, borderColor: '#ffffff', hoverOffset: 6 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '68%',
+        plugins: {
+          legend: { position: 'right', labels: { usePointStyle: true, pointStyle: 'circle', padding: 12, font: { size: 11 } } },
+          tooltip: { callbacks: { label: function(c) { return c.label + ': ' + fmt.format(c.raw); } } }
+        }
+      },
+      plugins: [{
+        id: 'centerTextMember',
+        afterDraw: function(chart) {
+          var ctx = chart.ctx;
+          var w = chart.width, h = chart.height;
+          ctx.save();
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          var cx = chart.chartArea.left + (chart.chartArea.right - chart.chartArea.left) / 2;
+          var cy = chart.chartArea.top + (chart.chartArea.bottom - chart.chartArea.top) / 2;
+          ctx.font = 'bold 18px Inter, system-ui, sans-serif';
+          ctx.fillStyle = '#1e293b';
+          ctx.fillText(fmt.format(meTotal), cx, cy - 8);
+          ctx.font = '11px Inter, system-ui, sans-serif';
+          ctx.fillStyle = '#94a3b8';
+          ctx.fillText('Total', cx, cy + 12);
+          ctx.restore();
+        }
+      }]
+    });
+  }
+
+  /* --- Chart 6: Histórico de Consumo por Membro (Stacked Bar) --- */
+  var mevoLabels = JSON.parse(document.getElementById('mevo-labels')?.textContent || '[]');
+  var mevoMembers = JSON.parse(document.getElementById('mevo-members')?.textContent || '[]');
+  if (mevoLabels.length > 0 && mevoMembers.length > 0) {
+    var mevoDatasets = mevoMembers.map(function(m) {
+      return {
+        label: m.name,
+        data: (m.amounts || []).map(function(v) { return v || 0; }),
+        backgroundColor: m.color,
+        borderRadius: 4,
+      };
+    });
+    getOrCreate('chart-member-evolution', {
+      type: 'bar',
+      data: { labels: mevoLabels, datasets: mevoDatasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'circle', padding: 14, font: { size: 11 } } },
+          tooltip: { callbacks: { label: function(c) { return c.dataset.label + ': ' + fmt.format(c.raw); } } }
+        },
+        scales: {
+          x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 } } },
+          y: { stacked: true, ticks: { callback: function(v) { return 'R$ ' + (v/1000).toFixed(0) + 'k'; }, font: { size: 11 } }, grid: { color: '#f1f5f9' } }
+        }
+      }
+    });
+  }
+}
+
+/* Renderiza no carregamento inicial */
+document.addEventListener('DOMContentLoaded', renderAllCharts);
+
+/* Re-renderiza após qualquer swap HTMX do dashboard */
+document.body.addEventListener('htmx:afterSwap', function(e) {
+  if (e.detail.target.id === 'dashboard-content') {
+    setTimeout(renderAllCharts, 50);
+  }
+});
+
+/* --- Chat Widget --- */
+function scrollChat() {
+  var c = document.getElementById('chat-messages-container');
+  if (c) c.scrollTop = c.scrollHeight;
+}
+
+function appendUserBubble(text) {
+  var container = document.getElementById('chat-messages-container');
+  if (!container || !text.trim()) return;
+  var div = document.createElement('div');
+  div.className = 'flex justify-end';
+  div.innerHTML = '<div class="bg-indigo-600 text-white rounded-2xl px-4 py-2.5 max-w-[85%] text-sm">' + text.trim() + '</div>';
+  container.appendChild(div);
+  scrollChat();
+}
+
+/* Append user bubble BEFORE the request fires (form submit) */
+document.body.addEventListener('htmx:beforeRequest', function(e) {
+  if (e.detail.target && e.detail.target.id === 'chat-messages-container') {
+    var form = document.getElementById('chat-form');
+    if (form && !form._chatBubbleSent) {
+      var input = form.querySelector('input[name="message"]');
+      if (input && input.value.trim()) {
+        appendUserBubble(input.value);
+        input.value = '';
+      }
+    }
+    form._chatBubbleSent = false;
+  }
+});
+
+/* Scroll to bottom after AI response arrives */
+document.body.addEventListener('htmx:afterSwap', function(e) {
+  if (e.detail.target && e.detail.target.id === 'chat-messages-container') {
+    setTimeout(scrollChat, 50);
+  }
+});
+
+/* Suggestion chips: inject user bubble + submit form normally */
+function askOracle(message) {
+  appendUserBubble(message);
+  var form = document.getElementById('chat-form');
+  var input = form.querySelector('input[name="message"]');
+  input.value = message;
+  form._chatBubbleSent = true;
+  htmx.trigger(form, 'submit');
+}
+
+</script>
+{% endblock %}

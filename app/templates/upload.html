@@ -1,0 +1,544 @@
+{% extends 'base.html' %}
+{% block title %}Importar Extrato — Money In{% endblock %}
+
+{% block content %}
+<div id="main-upload-container">
+  <div class="mb-8">
+    <h1 class="text-2xl font-bold text-slate-900">Importar Extratos</h1>
+    <p class="text-sm text-slate-500 mt-1">Faça upload de extratos bancários, faturas de cartão de crédito — até 5 arquivos por vez</p>
+  </div>
+
+  <form id="upload-form"
+        hx-post="/api/upload-statement"
+        hx-encoding="multipart/form-data"
+        hx-target="#main-upload-container"
+        hx-indicator="#loading-screen"
+        class="space-y-6">
+
+    <div id="dropzone"
+         class="relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-white px-8 py-12 text-center cursor-pointer transition-all hover:border-emerald-400 hover:bg-emerald-50/40 group">
+      <input type="file" name="files" id="file-input" accept=".pdf,.csv,.txt" multiple class="hidden" required />
+
+      <div id="dropzone-empty" class="pointer-events-none flex flex-col items-center">
+        <svg class="mx-auto h-12 w-12 text-slate-300 group-hover:text-emerald-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+        </svg>
+        <p class="mt-4 text-sm font-medium text-slate-600 group-hover:text-emerald-700 transition-colors">
+          Arraste os arquivos aqui ou <span class="text-emerald-600 underline underline-offset-2">clique para selecionar</span>
+        </p>
+        <p class="mt-1 text-xs text-slate-400">PDF, CSV ou TXT — Até 5 arquivos — IA Gemini</p>
+      </div>
+
+      <div id="dropzone-selected" class="hidden pointer-events-none flex flex-col items-center w-full">
+        <svg class="mx-auto h-10 w-10 text-emerald-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <button type="button" id="change-file-btn"
+                class="text-xs font-medium text-emerald-600 hover:text-emerald-700 underline underline-offset-2 pointer-events-auto">
+          Trocar arquivos
+        </button>
+      </div>
+    </div>
+
+    <div id="validation-cards" class="space-y-3 hidden"></div>
+
+    <input type="hidden" name="passwords" id="passwords-input" value="" />
+
+    <div class="flex items-center justify-end gap-3">
+      <button type="submit" id="import-btn" disabled
+              class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-emerald-600">
+        <span id="import-btn-icon"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg></span>
+        <span id="import-btn-label">Importar</span>
+      </button>
+    </div>
+  </form>
+
+  <div id="loading-screen" class="hidden htmx-indicator">
+    <div class="fixed inset-0 z-40 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+      <div class="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-8 shadow-2xl">
+        <div class="flex flex-col items-center text-center">
+          <div class="relative mb-5">
+            <svg class="h-14 w-14 animate-spin text-emerald-500" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/>
+              <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <svg class="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+              </svg>
+            </div>
+          </div>
+          <h3 class="text-lg font-semibold text-slate-900">Processando...</h3>
+          <p id="loading-message" class="mt-2 text-sm text-slate-500">Extraindo dados dos arquivos</p>
+          <div class="mt-6 w-full space-y-2">
+            <div class="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+              <div class="h-full w-full rounded-full bg-emerald-500 animate-pulse" id="loading-bar"></div>
+            </div>
+          </div>
+          <div id="skeleton-files" class="mt-5 space-y-2.5 w-full">
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 animate-pulse">
+              <div class="h-9 w-9 rounded-lg bg-slate-200"></div>
+              <div class="flex-1 space-y-1.5">
+                <div class="h-3 w-3/4 rounded bg-slate-200"></div>
+                <div class="h-2 w-1/2 rounded bg-slate-100"></div>
+              </div>
+              <div class="h-2 w-16 rounded bg-slate-200"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="upload-error" class="hidden mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"></div>
+
+  <div id="import-status-panel" class="hidden mt-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div class="flex items-center justify-between gap-3 mb-4">
+      <div>
+        <h2 class="text-sm font-semibold text-slate-900">Status de importações</h2>
+        <p class="text-xs text-slate-500">Acompanhe o processamento em segundo plano.</p>
+      </div>
+      <button type="button" id="refresh-import-status" class="text-xs font-semibold text-emerald-600 hover:text-emerald-700">Atualizar</button>
+    </div>
+    <div id="import-status-list" class="space-y-3"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function() {
+    var dropzone = document.getElementById('dropzone');
+    var fileInput = document.getElementById('file-input');
+    var importBtn = document.getElementById('import-btn');
+    var dropzoneEmpty = document.getElementById('dropzone-empty');
+    var dropzoneSelected = document.getElementById('dropzone-selected');
+    var changeFileBtn = document.getElementById('change-file-btn');
+    var validationCards = document.getElementById('validation-cards');
+    var passwordsInput = document.getElementById('passwords-input');
+
+    var fileStatuses = {};  // fileName -> {status, error?, encrypted?, fileId?, password?}
+    var passwordMap = {};   // fileName -> password
+
+    var token = localStorage.getItem('token');
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+
+    function getExt(filename) {
+      return filename.split('.').pop().toLowerCase();
+    }
+
+    function setCardStatus(card, status, message, extra) {
+      var icon = card.querySelector('.val-icon');
+      var statusEl = card.querySelector('.val-status');
+      statusEl.textContent = message;
+      card.classList.remove('border-slate-200', 'border-emerald-300', 'border-red-300', 'border-amber-300', 'border-emerald-500');
+
+      if (status === 'ok') {
+        card.classList.add('border-emerald-300');
+        card.style.borderLeft = '3px solid #10b981';
+        icon.innerHTML = '<svg class="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>';
+      } else if (status === 'encrypted') {
+        card.classList.add('border-amber-300');
+        card.style.borderLeft = '3px solid #f59e0b';
+        icon.innerHTML = '<svg class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>';
+
+        var pwdDiv = card.querySelector('.val-password');
+        pwdDiv.classList.remove('hidden');
+        pwdDiv.innerHTML =
+          '<div class="flex items-center gap-2">' +
+            '<input type="password" class="val-pwd-input block w-full rounded-lg border-amber-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm placeholder-slate-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 focus:outline-none" placeholder="Senha do PDF" autocomplete="off" />' +
+            '<button type="button" class="val-pwd-btn inline-flex items-center gap-1 rounded-lg bg-amber-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-amber-700 disabled:opacity-50 disabled:cursor-wait flex-shrink-0">' +
+              '<svg class="h-3.5 w-3.5 pwd-btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>' +
+              '<span class="pwd-btn-label">Desbloquear</span>' +
+            '</button>' +
+          '</div>' +
+          '<p class="val-pwd-msg text-xs mt-1.5 hidden"></p>';
+      } else if (status === 'unlocked') {
+        card.classList.add('border-emerald-500');
+        card.style.borderLeft = '3px solid #059669';
+        icon.innerHTML = '<svg class="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>';
+        var pwdDiv = card.querySelector('.val-password');
+        pwdDiv.classList.remove('hidden');
+        pwdDiv.className = 'val-password border-t border-slate-100 px-4 py-3 bg-emerald-50/40';
+        pwdDiv.innerHTML =
+          '<div class="flex items-center gap-2 text-sm text-emerald-700 font-medium">' +
+            '<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
+            'Arquivo desbloqueado' +
+          '</div>';
+      } else if (status === 'error') {
+        card.classList.add('border-red-300');
+        card.style.borderLeft = '3px solid #ef4444';
+        icon.innerHTML = '<svg class="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>';
+        var extraDiv = card.querySelector('.val-password');
+        if (extra) {
+          extraDiv.classList.remove('hidden');
+          extraDiv.className = 'val-password border-t border-slate-100 px-4 py-3 bg-red-50/40';
+          extraDiv.innerHTML = '<p class="text-xs text-red-600">' + escapeHtml(extra) + '</p>';
+        }
+      }
+    }
+
+    function createStatusCard(file) {
+      var card = document.createElement('div');
+      card.id = 'val-' + file.name.replace(/[^a-zA-Z0-9]/g, '-');
+      card.className = 'rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden transition-all';
+      card.innerHTML =
+        '<div class="flex items-center gap-3 px-4 py-3">' +
+          '<div class="val-icon flex-shrink-0">' +
+            '<svg class="h-5 w-5 animate-spin text-slate-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/><path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>' +
+          '</div>' +
+          '<div class="flex-1 min-w-0">' +
+            '<p class="text-sm font-medium text-slate-900 truncate">' + escapeHtml(file.name) + '</p>' +
+            '<p class="text-xs text-slate-400"><span class="val-status">Validando...</span> · ' + formatSize(file.size) + '</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="val-password hidden border-t border-slate-100 px-4 py-3"></div>';
+      return card;
+    }
+
+    window.escapeHtml = function(str) {
+      var div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    };
+
+    function updateValidationCards() {
+      validationCards.innerHTML = '';
+      var files = fileInput.files;
+      if (files.length === 0) {
+        validationCards.classList.add('hidden');
+        return;
+      }
+      validationCards.classList.remove('hidden');
+
+      for (var i = 0; i < files.length; i++) {
+        var f = files[i];
+        var card = createStatusCard(f);
+        validationCards.appendChild(card);
+      }
+    }
+
+    function validateFiles() {
+      var files = fileInput.files;
+      if (files.length === 0) return;
+      updateValidationCards();
+
+      for (var i = 0; i < files.length; i++) {
+        (function(idx) {
+          var f = files[idx];
+          var cardId = 'val-' + f.name.replace(/[^a-zA-Z0-9]/g, '-');
+          var card = document.getElementById(cardId);
+          if (!card) return;
+
+          var ext = getExt(f.name);
+          if (['pdf', 'csv', 'txt'].indexOf(ext) === -1) {
+            setCardStatus(card, 'error', 'Formato não suportado', 'Use PDF, CSV ou TXT');
+            fileStatuses[f.name] = {status: 'error', error: 'Formato não suportado'};
+            updateImportBtn();
+            return;
+          }
+
+          var formData = new FormData();
+          formData.append('file', f);
+
+          fetch('/api/upload-statement/validate-file', {
+            method: 'POST',
+            headers: {'Authorization': 'Bearer ' + token},
+            body: formData,
+          }).then(function(r) { return r.json(); }).then(function(data) {
+            var c = document.getElementById(cardId);
+            if (!c) return;
+            if (data.status === 'ok') {
+              setCardStatus(c, 'ok', 'PDF válido · ' + (data.text_length || '') + ' caracteres');
+              fileStatuses[f.name] = {status: 'ok'};
+              passwordMap[f.name] = null;
+            } else if (data.status === 'encrypted') {
+              setCardStatus(c, 'encrypted', 'PDF protegido — informe a senha');
+              fileStatuses[f.name] = {status: 'encrypted', fileId: data.file_id};
+              passwordMap[f.name] = null;
+
+              var pwdInput = c.querySelector('.val-pwd-input');
+              var pwdBtn = c.querySelector('.val-pwd-btn');
+              var pwdMsg = c.querySelector('.val-pwd-msg');
+
+              pwdBtn.onclick = (function(input, name, cardEl, fileId) {
+                return function() {
+                  var pwd = input.value.trim();
+                  if (!pwd) {
+                    pwdMsg.textContent = 'Informe a senha do PDF';
+                    pwdMsg.className = 'val-pwd-msg text-xs text-amber-600 mt-1.5';
+                    pwdMsg.classList.remove('hidden');
+                    return;
+                  }
+                  pwdBtn.disabled = true;
+                  pwdBtn.querySelector('.pwd-btn-label').textContent = 'Verificando...';
+                  pwdMsg.classList.add('hidden');
+
+                  var fd = new FormData();
+                  fd.append('file_id', fileId);
+                  fd.append('password', pwd);
+
+                  fetch('/api/upload-statement/verify-password', {
+                    method: 'POST',
+                    headers: {'Authorization': 'Bearer ' + token},
+                    body: fd,
+                  }).then(function(r) {
+                    if (r.ok) return r.json();
+                    return r.json().then(function(e) { throw new Error(e.error || 'Senha inválida'); });
+                  }).then(function() {
+                    passwordMap[name] = pwd;
+                    fileStatuses[name] = {status: 'unlocked', fileId: fileId};
+                    setCardStatus(cardEl, 'unlocked', 'Desbloqueado');
+                    updateImportBtn();
+                  }).catch(function(err) {
+                    pwdMsg.textContent = err.message || 'Senha inválida. Tente novamente.';
+                    pwdMsg.className = 'val-pwd-msg text-xs text-red-600 mt-1.5';
+                    pwdMsg.classList.remove('hidden');
+                    pwdBtn.disabled = false;
+                    pwdBtn.querySelector('.pwd-btn-label').textContent = 'Desbloquear';
+                    input.focus();
+                    input.select();
+                  });
+                };
+              })(pwdInput, f.name, c, data.file_id);
+
+              pwdInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  pwdBtn.click();
+                }
+              });
+            } else {
+              setCardStatus(c, 'error', 'Arquivo inválido', data.error || 'Erro desconhecido');
+              fileStatuses[f.name] = {status: 'error', error: data.error};
+            }
+            updateImportBtn();
+          }).catch(function(err) {
+            var c = document.getElementById(cardId);
+            if (!c) return;
+            setCardStatus(c, 'error', 'Erro de validação', err.message || 'Falha na conexão');
+            fileStatuses[f.name] = {status: 'error', error: 'Falha na conexão'};
+            updateImportBtn();
+          });
+        })(i);
+      }
+    }
+
+    function updateImportBtn() {
+      var files = fileInput.files;
+      if (files.length === 0) {
+        importBtn.disabled = true;
+        return;
+      }
+      var allReady = true;
+      for (var i = 0; i < files.length; i++) {
+        var f = files[i];
+        var st = fileStatuses[f.name];
+        if (!st) { allReady = false; break; }
+        if (st.status === 'error') { allReady = false; break; }
+        if (st.status === 'encrypted') { allReady = false; break; }
+      }
+      importBtn.disabled = !allReady;
+    }
+
+    function showFileInfo() {
+      fileInput.files.length > 0 ? (
+        dropzoneEmpty.classList.add('hidden'),
+        dropzoneSelected.classList.remove('hidden'),
+        dropzone.classList.add('border-emerald-400', 'bg-emerald-50/40')
+      ) : (
+        dropzoneEmpty.classList.remove('hidden'),
+        dropzoneSelected.classList.add('hidden'),
+        dropzone.classList.remove('border-emerald-400', 'bg-emerald-50/40')
+      );
+    }
+
+    dropzone.addEventListener('click', function(e) {
+      if (e.target === changeFileBtn || changeFileBtn.contains(e.target)) return;
+      fileInput.click();
+    });
+
+    dropzone.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      dropzone.classList.add('border-emerald-400', 'bg-emerald-50/60');
+    });
+
+    dropzone.addEventListener('dragleave', function() {
+      dropzone.classList.remove('border-emerald-400', 'bg-emerald-50/60');
+    });
+
+    dropzone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      dropzone.classList.remove('border-emerald-400', 'bg-emerald-50/60');
+      if (e.dataTransfer.files.length > 0) {
+        var dt = new DataTransfer();
+        for (var i = 0; i < e.dataTransfer.files.length; i++) {
+          dt.items.add(e.dataTransfer.files[i]);
+        }
+        fileInput.files = dt.files;
+        onFilesChanged();
+      }
+    });
+
+    function onFilesChanged() {
+      fileStatuses = {};
+      passwordMap = {};
+      showFileInfo();
+      validateFiles();
+    }
+
+    fileInput.addEventListener('change', onFilesChanged);
+
+    changeFileBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      fileInput.value = '';
+      fileStatuses = {};
+      passwordMap = {};
+      showFileInfo();
+      validationCards.classList.add('hidden');
+      validationCards.innerHTML = '';
+      updateImportBtn();
+      fileInput.click();
+    });
+
+    if (token) {
+      htmx.on('htmx:configRequest', function(detail) {
+        detail.headers['Authorization'] = 'Bearer ' + token;
+      });
+    }
+
+    async function fetchUploadStatus() {
+      if (!token) return;
+      try {
+        var response = await fetch('/api/upload-statement/status', {
+          headers: { 'Authorization': 'Bearer ' + token },
+        });
+        if (!response.ok) return;
+        var data = await response.json();
+        var list = document.getElementById('import-status-list');
+        if (!list) return;
+
+        if (!data || data.length === 0) {
+          document.getElementById('import-status-panel').classList.add('hidden');
+          return;
+        }
+
+        document.getElementById('import-status-panel').classList.remove('hidden');
+        list.innerHTML = data.map(function(item) {
+          var statusClass = 'bg-slate-100 text-slate-700';
+          if (item.status === 'PROCESSING') statusClass = 'bg-amber-100 text-amber-700';
+          else if (item.status === 'DONE') statusClass = 'bg-emerald-100 text-emerald-700';
+          else if (item.status === 'FAILED') statusClass = 'bg-rose-100 text-rose-700';
+
+          return '<div class="rounded-xl border border-slate-200 p-4 bg-slate-50">' +
+            '<div class="flex items-center justify-between gap-3">' +
+              '<div class="min-w-0">' +
+                '<p class="text-sm font-semibold text-slate-900 truncate">' + escapeHtml(item.display_name) + '</p>' +
+                '<p class="text-xs text-slate-500 mt-1">' + (item.uploaded_at ? new Date(item.uploaded_at).toLocaleString() : '') + '</p>' +
+              '</div>' +
+              '<span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ' + statusClass + '">' +
+                escapeHtml(item.status || 'PENDING') +
+              '</span>' +
+            '</div>' +
+            (item.progress_message ? '<p class="mt-2 text-xs text-slate-500">' + escapeHtml(item.progress_message) + '</p>' : '') +
+            (item.error_message ? '<p class="mt-1 text-xs text-rose-600">' + escapeHtml(item.error_message) + '</p>' : '') +
+          '</div>';
+        }).join('');
+      } catch (err) {
+        // ignore polling errors
+      }
+    }
+
+    document.getElementById('refresh-import-status')?.addEventListener('click', function() {
+      fetchUploadStatus();
+    });
+
+    if (token) {
+      fetchUploadStatus();
+      window.uploadStatusInterval = setInterval(fetchUploadStatus, 6000);
+    }
+
+    // Set passwords BEFORE HTMX reads form data (native click fires first)
+    importBtn.addEventListener('click', function() {
+      var pwdList = [];
+      var files = fileInput.files;
+      for (var i = 0; i < files.length; i++) {
+        pwdList.push(passwordMap[files[i].name] || null);
+      }
+      passwordsInput.value = JSON.stringify(pwdList);
+    });
+
+    document.getElementById('upload-form').addEventListener('htmx:beforeRequest', function() {
+      var files = fileInput.files;
+      var numFiles = files.length || 1;
+      var skeletonContainer = document.getElementById('skeleton-files');
+      skeletonContainer.innerHTML = '';
+      for (var i = 0; i < Math.min(numFiles, 5); i++) {
+        var div = document.createElement('div');
+        div.className = 'flex items-center gap-3 p-3 rounded-xl bg-slate-50 animate-pulse';
+        div.innerHTML =
+          '<div class="h-9 w-9 rounded-lg bg-slate-200"></div>' +
+          '<div class="flex-1 space-y-1.5">' +
+          '  <div class="h-3 w-3/4 rounded bg-slate-200"></div>' +
+          '  <div class="h-2 w-1/2 rounded bg-slate-100"></div>' +
+          '</div>' +
+          '<div class="h-2 w-16 rounded bg-slate-200"></div>';
+        skeletonContainer.appendChild(div);
+      }
+
+      document.getElementById('import-btn-icon').innerHTML =
+        '<svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>';
+      document.getElementById('import-btn-label').textContent = 'Processando';
+      importBtn.disabled = true;
+
+      var loadingMessages = [
+        'Extraindo dados dos arquivos',
+        'Executando extração...',
+        'Processando extratos bancários',
+        'Analisando com IA Gemini',
+        'Categorizando transações',
+        'Identificando contas bancárias',
+        'Processando...',
+      ];
+      var msgIdx = 0;
+      document.getElementById('loading-message').textContent = loadingMessages[0];
+      window.loadingInterval = setInterval(function() {
+        msgIdx = (msgIdx + 1) % loadingMessages.length;
+        document.getElementById('loading-message').textContent = loadingMessages[msgIdx];
+      }, 2500);
+    });
+
+    document.getElementById('upload-form').addEventListener('htmx:afterRequest', function() {
+      if (window.loadingInterval) {
+        clearInterval(window.loadingInterval);
+        window.loadingInterval = null;
+      }
+    });
+
+    htmx.on('htmx:beforeSwap', function(evt) {
+      if (evt.detail.target && evt.detail.target.id === 'main-upload-container') {
+        if (evt.detail.xhr.status >= 400) {
+          var errorDiv = document.getElementById('upload-error');
+          errorDiv.classList.remove('hidden');
+          document.getElementById('import-btn-icon').innerHTML =
+            '<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>';
+          document.getElementById('import-btn-label').textContent = 'Importar';
+          importBtn.disabled = false;
+          try {
+            var resp = JSON.parse(evt.detail.xhr.responseText);
+            errorDiv.textContent = resp.detail || 'Erro ao processar arquivo. Tente novamente.';
+          } catch (e) {
+            errorDiv.textContent = 'Erro ao processar arquivo. Tente novamente.';
+          }
+          evt.detail.shouldSwap = false;
+        }
+      }
+    });
+  })();
+</script>
+{% endblock %}

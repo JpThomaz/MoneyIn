@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+sqlmodel
+pydantic
+pydantic-settings
+python-dotenv
+pymupdf
+google-genai
+pyjwt
+passlib[bcrypt]
+bcrypt
+python-multipart
+jinja2

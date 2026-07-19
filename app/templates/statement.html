@@ -1,0 +1,304 @@
+{% extends 'base.html' %}
+{% block title %}Extrato — Money In{% endblock %}
+
+{% block content %}
+<div id="statement-container" class="space-y-6">
+  <!-- HEADER -->
+  <div class="flex items-center justify-between flex-wrap gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Extrato Financeiro</h1>
+      <p class="text-sm text-slate-500 mt-0.5">Movimentações de <span class="font-semibold text-slate-700">{{ current_month }}/{{ current_year }}</span></p>
+    </div>
+    <div class="flex items-center gap-3">
+      {% if file_imports %}
+      <div class="relative" id="file-imports-dropdown-container">
+        <button onclick="toggleFileImportsDropdown()"
+                class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          Arquivos Importados
+          <span class="inline-flex items-center justify-center rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">{{ file_imports|length }}</span>
+          <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div id="file-imports-dropdown" class="hidden absolute right-0 z-20 mt-2 w-80 origin-top-right rounded-lg border border-slate-200 bg-white shadow-lg">
+          <div class="border-b border-slate-100 px-4 py-2.5">
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Histórico de importações</p>
+          </div>
+          <div class="max-h-64 overflow-y-auto divide-y divide-slate-50">
+            {% for fi in file_imports %}
+            <div class="flex items-center justify-between px-4 py-2.5 hover:bg-slate-50 group">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <div class="flex-shrink-0 w-7 h-7 rounded-md bg-slate-100 flex items-center justify-center">
+                  <svg class="h-3.5 w-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                </div>
+                <div class="min-w-0">
+                  <p class="text-sm font-medium text-slate-700 truncate">{{ fi.display_name }}</p>
+                  <p class="text-[10px] text-slate-400">{{ fi.uploaded_at.strftime('%d/%m/%Y %H:%M') if fi.uploaded_at else '' }}</p>
+                  {% if fi.progress_message %}
+                  <p class="text-[10px] mt-1 {% if fi.status == 'FAILED' %}text-rose-600{% else %}text-slate-500{% endif %}">{{ fi.progress_message }}</p>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="flex-shrink-0 text-right">
+                <span class="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold {% if fi.status == 'DONE' %}bg-emerald-100 text-emerald-700{% elif fi.status == 'PROCESSING' %}bg-amber-100 text-amber-700{% elif fi.status == 'FAILED' %}bg-rose-100 text-rose-700{% else %}bg-slate-100 text-slate-700{% endif %}">{{ fi.status or 'PENDING' }}</span>
+              </div>
+              <button onclick="batchDelete('{{ fi.id }}')"
+                      class="flex-shrink-0 rounded p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                      title="Excluir lote">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <button hx-get="/api/transactions/new-form"
+              hx-target="#transaction-table-wrapper"
+              hx-swap="afterbegin"
+              class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+        Nova Transação
+      </button>
+    </div>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <form id="filter-form"
+          hx-get="/api/transactions"
+          hx-target="#statement-content"
+          hx-trigger="change"
+          hx-swap="outerHTML"
+          class="flex flex-wrap items-end gap-3">
+      <input type="hidden" name="sort_by" id="filter-sort-by" value="{{ sort_by|default('date') }}" />
+      <input type="hidden" name="sort_dir" id="filter-sort-dir" value="{{ sort_dir|default('desc') }}" />
+      <input type="hidden" name="search" id="filter-search" value="{{ search|default('') }}" />
+
+      <div class="flex flex-col gap-1 flex-1 min-w-[200px] max-w-xs">
+        <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Buscar</label>
+        <div class="relative">
+          <input type="text" id="tx-search-input" value="{{ search|default('') }}"
+                 placeholder="Buscar por descrição..."
+                 oninput="txDebouncedSearch(this.value)"
+                 class="w-full rounded-lg border-slate-200 bg-white pl-8 pr-3 py-1.5 text-sm shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none" />
+          <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Conta</label>
+        <div class="flex items-center gap-1">
+          <select name="account_id"
+                  class="rounded-lg border-slate-200 bg-white px-3 py-1.5 text-sm shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none">
+            <option value="">Todas as contas</option>
+            {% for a in accounts %}
+            <option value="{{ a.id }}" {% if a.id|string == selected_account %}selected{% endif %}>{{ a.name }}</option>
+            {% endfor %}
+          </select>
+          <button type="button" onclick="document.getElementById('nova-conta-modal-statement').classList.remove('hidden')"
+                  class="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-400 hover:text-emerald-600 hover:border-emerald-200 hover:bg-emerald-50 transition-colors shadow-sm"
+                  title="Criar nova conta">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Responsável</label>
+        <select name="user_id"
+                class="rounded-lg border-slate-200 bg-white px-3 py-1.5 text-sm shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none">
+          <option value="">Todos</option>
+          {% for m in members %}
+          <option value="{{ m.id }}" {% if m.id|string == selected_user %}selected{% endif %}>{{ m.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Categoria</label>
+        <select name="category_id"
+                class="rounded-lg border-slate-200 bg-white px-3 py-1.5 text-sm shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none">
+          <option value="">Todas</option>
+          {% for c in categories %}
+          <option value="{{ c.id }}" {% if c.id|string == selected_category %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Mês</label>
+        <select name="month"
+                class="rounded-lg border-slate-200 bg-white px-3 py-1.5 text-sm shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none">
+          {% for m in range(1, 13) %}
+          <option value="{{ m }}" {% if m == current_month %}selected{% endif %}>{{ '%02d'|format(m) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Ano</label>
+        <select name="year"
+                class="rounded-lg border-slate-200 bg-white px-3 py-1.5 text-sm shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none">
+          {% for y in range(2024, 2031) %}
+          <option value="{{ y }}" {% if y == current_year %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="flex items-center gap-2 pb-1">
+        <input type="checkbox" name="show_transfers" value="true"
+               {% if show_transfers %}checked{% endif %}
+               class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
+        <label class="text-xs text-slate-500 select-none">Mostrar transferências</label>
+      </div>
+      <div class="flex items-center gap-2 pb-1">
+        <input type="checkbox" name="hide_projections" value="true"
+               {% if hide_projections %}checked{% endif %}
+               class="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500" />
+        <label class="text-xs text-slate-500 select-none">Ocultar Projeções Futuras</label>
+      </div>
+    </form>
+  </div>
+
+  <!-- SUMMARY + TABLE (swapped by filter) -->
+  <div id="statement-content">
+    {% include "partials/statement_content.html" %}
+  </div>
+</div>
+
+<!-- Create Account Modal -->
+<div id="nova-conta-modal-statement" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+  <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl border border-slate-200">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-semibold text-slate-900">Nova Conta</h2>
+      <button type="button" onclick="document.getElementById('nova-conta-modal-statement').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 transition-colors">
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <form hx-post="/api/contas"
+          hx-swap="none"
+          hx-on::after-request="if(event.detail.successful){document.getElementById('nova-conta-modal-statement').classList.add('hidden');window.location.reload();}"
+          class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Nome da Conta</label>
+        <input type="text" name="name" required placeholder="Ex: Itaú Universitário"
+               class="block w-full rounded-lg border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none transition-colors" />
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Tipo</label>
+          <select name="type" required
+                  class="block w-full rounded-lg border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none transition-colors">
+            <option value="CORRENTE">Conta Corrente</option>
+            <option value="CREDITO">Cartão de Crédito</option>
+            <option value="BENEFICIO">Benefício (VA/VR)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Banco</label>
+          <select name="bank_slug"
+                  class="block w-full rounded-lg border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none transition-colors">
+            <option value="">Selecione</option>
+            <option value="nubank">Nubank</option>
+            <option value="itau">Itaú</option>
+            <option value="bradesco">Bradesco</option>
+            <option value="sicredi">Sicredi</option>
+            <option value="santander">Santander</option>
+            <option value="caixa">Caixa</option>
+            <option value="bb">Banco do Brasil</option>
+            <option value="inter">Banco Inter</option>
+            <option value="outro">Outro</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Titular</label>
+        <select name="user_id" required
+                class="block w-full rounded-lg border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none transition-colors">
+          {% for member in members %}
+          <option value="{{ member.id }}" {% if member.id == current_user_id %}selected{% endif %}>{{ member.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Saldo Atual (R$)</label>
+          <input type="number" step="0.01" name="balance" value="0.00"
+                 class="block w-full rounded-lg border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none transition-colors" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Limite (opcional)</label>
+          <input type="number" step="0.01" name="credit_limit" placeholder="0.00"
+                 class="block w-full rounded-lg border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 focus:outline-none transition-colors" />
+        </div>
+      </div>
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button type="button" onclick="document.getElementById('nova-conta-modal-statement').classList.add('hidden')"
+                class="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50">
+          Cancelar
+        </button>
+        <button type="submit"
+                class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+          Criar Conta
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function toggleFileImportsDropdown() {
+    document.getElementById('file-imports-dropdown')?.classList.toggle('hidden');
+  }
+  document.addEventListener('click', function(e) {
+    var container = document.getElementById('file-imports-dropdown-container');
+    if (container && !container.contains(e.target)) {
+      document.getElementById('file-imports-dropdown')?.classList.add('hidden');
+    }
+  });
+
+  function batchDelete(fileImportId) {
+    if (!confirm('Excluir todas as transações deste lote?')) return;
+    var token = localStorage.getItem('token');
+    fetch('/api/transactions/batch/' + fileImportId, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + token },
+    }).then(function(r) { return r.text(); }).then(function(html) {
+      document.body.insertAdjacentHTML('beforeend', html);
+      setTimeout(function() { window.location.reload(); }, 500);
+    }).catch(function() {
+      alert('Erro ao excluir lote');
+    });
+  }
+
+  var _txSearchTimer = null;
+  function txDebouncedSearch(value) {
+    clearTimeout(_txSearchTimer);
+    _txSearchTimer = setTimeout(function() {
+      document.getElementById('filter-search').value = value;
+      document.getElementById('filter-form').dispatchEvent(new Event('change'));
+    }, 300);
+  }
+
+  var _txSortBy = '{{ sort_by|default("date") }}';
+  var _txSortDir = '{{ sort_dir|default("desc") }}';
+  function txSortBy(col, dir) {
+    _txSortBy = col;
+    _txSortDir = dir;
+    document.getElementById('filter-sort-by').value = col;
+    document.getElementById('filter-sort-dir').value = dir;
+    document.getElementById('filter-form').dispatchEvent(new Event('change'));
+  }
+
+  var token = localStorage.getItem('token');
+  if (token) {
+    htmx.on('htmx:configRequest', function(detail) {
+      detail.headers['Authorization'] = 'Bearer ' + token;
+    });
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,40 @@
+<div>
+  <div class="mb-3">
+    <strong>Documento:</strong> {{ document_type }} — <strong>Banco:</strong> {{ bank }} — <strong>Transações:</strong> {{ transactions_found }}
+  </div>
+
+  <div class="overflow-auto">
+    <table class="min-w-full text-left">
+      <thead>
+        <tr>
+          <th class="px-2 py-1">Data</th>
+          <th class="px-2 py-1">Descrição</th>
+          <th class="px-2 py-1">Valor</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in transactions %}
+        <tr class="border-t border-white/5">
+          <td class="px-2 py-2">{{ t.data or t.date }}</td>
+          <td class="px-2 py-2">{{ t.descricao or t.description }}</td>
+          <td class="px-2 py-2 {% if (t.valor or t.amount) | float < 0 %}text-alert{% else %}text-brand{% endif %}">
+            {{ (t.valor or t.amount) | float | round(2) }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="mt-4 flex justify-end">
+    <!-- hidden serialized transactions for HTMX to include in confirm request -->
+    <input type="hidden" name="transactions" value='{{ transactions | tojson }}' />
+    <input type="hidden" name="account_id" value="{{ account_id }}" />
+    <button
+      hx-post="/api/upload-statement/confirm"
+      hx-encoding="json"
+      hx-include="#preview-tabela"
+      class="btn-primary"
+    >Confirmar e Salvar no Banco de Dados</button>
+  </div>
+</div>
