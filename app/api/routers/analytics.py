@@ -62,6 +62,33 @@ def _compute_monthly_cash_flows(
     return monthly
 
 
+def _compute_monthly_net_flow(
+    db: Session,
+    household_id: UUID,
+    month_keys: List[str],
+) -> List[float]:
+    """Compute monthly net flow (non-cumulative) for each month in month_keys.
+
+    Matches the notebook query: SUM(amount) per month from CONFIRMED non-transfer
+    transactions. Positive = income, negative = expense.
+    """
+    if not month_keys:
+        return []
+
+    first_key = month_keys[0]
+    last_key = month_keys[-1]
+    start = date(int(first_key[:4]), int(first_key[5:7]), 1)
+    y, m = int(last_key[:4]), int(last_key[5:7])
+    if m == 12:
+        end = date(y, 12, 31)
+    else:
+        end = date(y, m + 1, 1) - timedelta(days=1)
+
+    flows = _compute_monthly_cash_flows(db, household_id, start, end)
+
+    return [round(flows.get(k, 0.0), 2) for k in month_keys]
+
+
 def _compute_cumulative_cash_flow(
     db: Session,
     household_id: UUID,
@@ -475,7 +502,7 @@ def _month_keys_and_labels(
 def compute_balance_forecast(
     db: Session,
     household_id: UUID,
-    historical_months: int = 6,
+    historical_months: int = 12,
     forecast_months: int = 6,
 ):
     """Build historical monthly balance totals and forecast future months.
@@ -519,9 +546,10 @@ def compute_balance_forecast(
     # Map historical keys to values
     hist_values = [db_map.get(k) for k in db_keys[:historical_months]]
 
-    # Fallback 1: if no history, compute cumulative cash flow from transactions
+    # Fallback 1: if no history, compute monthly net flow from CONFIRMED transactions
+    # (same as notebook: SUM(amount) per month, non-cumulative)
     if all(v is None for v in hist_values):
-        hist_values = _compute_cumulative_cash_flow(
+        hist_values = _compute_monthly_net_flow(
             db, household_id, db_keys[:historical_months]
         )
 

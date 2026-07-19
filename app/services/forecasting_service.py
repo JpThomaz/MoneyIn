@@ -127,18 +127,22 @@ def _forecast_harmonic(history: List[dict], periods: int) -> ForecastResult:
     n = len(history)
     y = [h["balance"] for h in history]
 
-    # Build design matrix [1, t, sin(2πt/12), cos(2πt/12)] for each observation
+    # Dynamic period: 12 if enough data, else half the training length (min 2)
+    # Matches notebook: model_period = 12 if len(y_train) >= 12 else max(2, len(y_train) // 2)
+    period = 12 if n >= 12 else max(2, n // 2)
+
+    # Build design matrix [1, t, sin(2πt/period), cos(2πt/period)] for each observation
     A = []
     for i in range(n):
         t = float(i)
-        A.append([1.0, t, math.sin(2 * math.pi * t / 12), math.cos(2 * math.pi * t / 12)])
+        A.append([1.0, t, math.sin(2 * math.pi * t / period), math.cos(2 * math.pi * t / period)])
 
     # Solve the normal equations: (A^T A) β = A^T y   via Gauss-Jordan
     ATA, ATy = _normal_equations(A, y)
     beta = _gauss_jordan(ATA, ATy)
 
     # Predictions over the training set
-    y_hat = [_predict(beta, float(i)) for i in range(n)]
+    y_hat = [_predict(beta, float(i), period) for i in range(n)]
     residuals = [yi - h for yi, h in zip(y, y_hat)]
     variance = sum(r * r for r in residuals) / max(n - 4, 1)
     std_err = math.sqrt(variance) if variance > 1e-10 else abs(y[-1]) * 0.05 or 1.0
@@ -147,7 +151,7 @@ def _forecast_harmonic(history: List[dict], periods: int) -> ForecastResult:
     fv, lo, hi = [], [], []
     for step in range(1, periods + 1):
         future_t = float(n - 1 + step)
-        pred = _predict(beta, future_t)
+        pred = _predict(beta, future_t, period)
         margin = Z95 * std_err * math.sqrt(step)
         fv.append(round(pred, 2))
         lo.append(round(pred - margin, 2))
@@ -216,11 +220,11 @@ def _gauss_jordan(A: List[List[float]], b: List[float]) -> List[float]:
     return [aug[i][n] for i in range(n)]
 
 
-def _predict(beta: List[float], t: float) -> float:
-    """Evaluate the harmonic model: c + a*t + b1*sin(2πt/12) + b2*cos(2πt/12)."""
+def _predict(beta: List[float], t: float, period: int = 12) -> float:
+    """Evaluate the harmonic model: c + a*t + b1*sin(2πt/period) + b2*cos(2πt/period)."""
     return (
         beta[0]
         + beta[1] * t
-        + beta[2] * math.sin(2 * math.pi * t / 12)
-        + beta[3] * math.cos(2 * math.pi * t / 12)
+        + beta[2] * math.sin(2 * math.pi * t / period)
+        + beta[3] * math.cos(2 * math.pi * t / period)
     )
